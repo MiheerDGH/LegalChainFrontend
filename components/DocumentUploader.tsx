@@ -13,28 +13,28 @@ const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+  if (!file) return;
+  try {
+    setStatus('Uploading...');
 
-    try {
-      setStatus('Uploading...');
+    const session = await supabase.auth.getSession();
+    const token = session.data?.session?.access_token;
 
-      const { data: sessionData, error } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        setStatus('No valid token found.');
-        return;
-      }
-
-      await uploadDocument(file, token);
-      setStatus('Upload successful!');
-      setFile(null);
-      onUploadComplete();
-    } catch (err) {
-      console.error('Upload error:', err);
-      setStatus('Upload failed');
+    if (!token) {
+      setStatus('No valid token found.');
+      return;
     }
-  };
+
+    await uploadDocument(file, token);
+    setStatus('Upload successful!');
+    setFile(null);
+    onUploadComplete();
+  } catch (err) {
+    console.error('Upload failed:', err);
+    setStatus('Upload failed');
+  }
+};
+
 
   return (
     <div className="space-y-2">
