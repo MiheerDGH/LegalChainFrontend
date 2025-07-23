@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { uploadDocument } from '../lib/api';
-import supabase from '../lib/supabaseClient'; // Make sure this points to your Supabase client
+import supabase from '../lib/supabaseClient';
 
 const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }) => {
   const [file, setFile] = useState<File | null>(null);
@@ -13,36 +13,45 @@ const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }
   };
 
   const handleUpload = async () => {
-  if (!file) return;
-  try {
-    setStatus('Uploading...');
+    if (!file) return;
+    try {
+      setStatus('Uploading...');
 
-    const session = await supabase.auth.getSession();
-    const token = session.data?.session?.access_token;
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
 
-    if (!token) {
-      setStatus('No valid token found.');
-      return;
+      if (!token) {
+        setStatus('Authentication error. Please log in again.');
+        return;
+      }
+
+      await uploadDocument(file, token);
+      setStatus('Upload successful!');
+      setFile(null);
+      onUploadComplete();
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setStatus('Upload failed. Try again.');
     }
-
-    await uploadDocument(file, token);
-    setStatus('Upload successful!');
-    setFile(null);
-    onUploadComplete();
-  } catch (err) {
-    console.error('Upload failed:', err);
-    setStatus('Upload failed');
-  }
-};
-
+  };
 
   return (
-    <div className="space-y-2">
-      <input type="file" accept=".pdf,.docx" onChange={handleFileChange} />
-      <button onClick={handleUpload} disabled={!file} className="bg-blue-500 text-white px-3 py-1 rounded">
+    <div className="bg-[#1a1a1a] p-6 rounded shadow text-white space-y-3">
+      <label className="block text-sm font-semibold text-yellow-400">Upload a Legal Document (PDF/DOCX)</label>
+      <input
+        type="file"
+        accept=".pdf,.docx"
+        onChange={handleFileChange}
+        className="w-full text-sm text-gray-300 file:bg-yellow-400 file:text-black file:rounded file:px-4 file:py-2 file:border-0 file:mr-3"
+      />
+      <button
+        onClick={handleUpload}
+        disabled={!file}
+        className="bg-yellow-400 text-black font-semibold px-4 py-2 rounded hover:bg-yellow-500 transition"
+      >
         Upload
       </button>
-      <div className="text-sm text-gray-600">{status}</div>
+      {status && <p className="text-sm text-gray-400">{status}</p>}
     </div>
   );
 };

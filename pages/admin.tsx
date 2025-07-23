@@ -7,8 +7,8 @@ export default function AdminPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      <div className="min-h-screen bg-[#111] text-white p-6">
+        <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
         {session && <AdminStats token={session.access_token} />}
       </div>
     </ProtectedRoute>
