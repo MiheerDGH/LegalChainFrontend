@@ -16,29 +16,58 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#111] px-4">
-      <div className="bg-[#1a1a1a] p-8 rounded-lg shadow-md w-full max-w-md text-white">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6 text-center">Login to Legal Chain</h1>
-        <form onSubmit={handleLogin} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-black px-4">
+      <div className="bg-[#111] text-yellow-100 w-full max-w-md p-8 rounded-xl shadow-[0_0_30px_rgba(255,215,0,0.2)] border border-yellow-700">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-6 text-center tracking-wide">LOGIN</h1>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          {/* Email */}
           <input
             type="email"
             placeholder="Email"
-            className="w-full p-3 rounded bg-[#222] border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="w-64 mx-auto block px-4 py-4 rounded-md bg-black border border-yellow-600 text-yellow-100 placeholder-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+
+          {/* Password */}
           <input
             type="password"
             placeholder="Password"
-            className="w-full p-3 rounded bg-[#222] border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="w-64 mx-auto block px-4 py-4 rounded-md bg-black border border-yellow-600 text-yellow-100 placeholder-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="submit" className="w-full bg-yellow-400 text-black py-3 rounded font-semibold hover:bg-yellow-500 transition">
-            Login
+
+          {/* Options Section */}
+          <div className="flex flex-col items-center gap-2 w-64 mx-auto text-sm text-yellow-300 mt-2">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="accent-yellow-500" />
+              Remember me
+            </label>
+            <a href="/forgot-password" className="hover:underline">Forgot password?</a>
+          </div>
+
+          {/* Login Button */}
+          <button
+            type="submit"
+            className="w-64 mx-auto block bg-gradient-to-r from-yellow-500 to-yellow-400 text-black py-3 rounded-md font-bold hover:brightness-110 transition shadow hover:shadow-yellow-400/30 mt-4"
+          >
+            LOGIN
           </button>
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+          {/* Error Feedback */}
+          {error && (
+            <p className="text-red-500 text-sm text-center border border-red-500 rounded p-2 bg-red-900/20 w-64 mx-auto mt-2">
+              {error}
+            </p>
+          )}
         </form>
+
+        {/* Signup Footer */}
+        <p className="text-center text-sm text-yellow-300 mt-6">
+          Not a member? <a href="/signup" className="text-yellow-400 hover:underline">Sign up now</a>
+        </p>
       </div>
     </div>
   );
