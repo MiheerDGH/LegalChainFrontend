@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
+  interface Stats {
+  totalUsers: number;
+  totalDocuments: number;
+  topUserEmail: string;
+}
+
 const AdminStats = ({ token }: { token: string }) => {
-  const [stats, setStats] = useState<any>(null);
+
+
+  const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -10,7 +18,7 @@ const AdminStats = ({ token }: { token: string }) => {
         const res = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/stats`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setStats(res.data);
+        setStats(res.data as Stats);
       } catch (err) {
         console.error('Failed to fetch admin stats', err);
       }

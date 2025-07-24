@@ -1,4 +1,10 @@
-const AnalysisResult = ({ data }: { data: any }) => {
+interface Analysis {
+  summary: string;
+  clauses: string[];
+  risks: string[];
+}
+
+const AnalysisResult = ({ data }: { data: Analysis }) => {
   if (!data) return null;
 
   return (

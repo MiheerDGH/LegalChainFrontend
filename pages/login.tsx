@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -45,7 +46,9 @@ export default function LoginPage() {
               <input type="checkbox" className="accent-yellow-500" />
               Remember me
             </label>
-            <a href="/forgot-password" className="hover:underline">Forgot password?</a>
+            <Link href="/forgot-password" className="hover:underline">
+              Forgot password?
+            </Link>
           </div>
 
           {/* Login Button */}
@@ -66,8 +69,11 @@ export default function LoginPage() {
 
         {/* Signup Footer */}
         <p className="text-center text-sm text-yellow-300 mt-6">
-          Not a member? <a href="/signup" className="text-yellow-400 hover:underline">Sign up now</a>
-        </p>
+          Not a member?{' '}
+          <Link href="/signup">
+            <span className="text-yellow-400 hover:underline">Sign up now</span>
+          </Link>
+</p>
       </div>
     </div>
   );
