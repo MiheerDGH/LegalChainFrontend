@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSession } from '@supabase/auth-helpers-react';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AdminStats from '../components/AdminStats';
-import Button from '../components/ui/Button'; // ✅ Uses fixed Button
+import Button from '../components/ui/Button'; 
 import NavBar from '../components/ui/NavBar';
 import Link from 'next/link';
 
