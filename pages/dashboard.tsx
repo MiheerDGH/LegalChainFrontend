@@ -9,11 +9,17 @@ interface Document {
   status: string;
 }
 
+interface Analysis {
+  summary: string;
+  clauses: string[];
+  risks: string[];
+}
+
 const Dashboard: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -41,7 +47,7 @@ const Dashboard: React.FC = () => {
     setAnalysis(null);
     try {
       const res = await axios.post('/api/ai/analyze', { id });
-      setAnalysis(res.data);
+      setAnalysis(res.data as Analysis);
     } catch (err) {
       console.error('Analysis failed:', err);
     }
@@ -60,7 +66,7 @@ const Dashboard: React.FC = () => {
       {loading ? (
         <p>Loading documents...</p>
       ) : documents.length === 0 ? (
-        <p className="text-gray-400">You haven't uploaded any documents yet.</p>
+        <p className="text-gray-400">You haven&apos;t uploaded any documents yet.</p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {documents.map((doc) => (
