@@ -25,7 +25,21 @@ const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }
         return;
       }
 
-      await uploadDocument(file, token);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('https://legalchainbackend.onrender.com/api/docs/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Upload failed');
+      }
       setStatus('Upload successful!');
       setFile(null);
       onUploadComplete();

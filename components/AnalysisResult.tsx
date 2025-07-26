@@ -15,7 +15,7 @@ const AnalysisResult = ({ data }: { data: Analysis }) => {
       <h4 className="text-xl font-semibold mb-2 text-yellow-300">Key Clauses</h4>
       {data.clauses?.length ? (
         <ul className="list-disc list-inside text-gray-300 mb-6">
-          {data.clauses.map((clause: string, idx: number) => (
+          {data.clauses.map((clause, idx) => (
             <li key={idx}>{clause}</li>
           ))}
         </ul>
@@ -24,9 +24,18 @@ const AnalysisResult = ({ data }: { data: Analysis }) => {
       )}
 
       <h4 className="text-xl font-semibold mb-2 text-yellow-300">Risk Flags</h4>
-      <p className="text-gray-300">{data.risks || 'No risks detected.'}</p>
+      {data.risks?.length ? (
+        <ul className="list-disc list-inside text-gray-300">
+          {data.risks.map((risk, idx) => (
+            <li key={idx}>{risk}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-500">No risks detected.</p>
+      )}
     </div>
   );
 };
 
 export default AnalysisResult;
+
