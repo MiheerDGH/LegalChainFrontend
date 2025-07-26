@@ -1,7 +1,7 @@
-"use client";
-
-import { useRouter } from 'next/navigation';
-import supabase from '../../lib/supabaseClient';
+// components/Navbar.tsx
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import supabase from '../lib/supabaseClient';
 
 export default function Navbar() {
   const router = useRouter();
@@ -12,8 +12,14 @@ export default function Navbar() {
   };
 
   return (
-    <nav style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem' }}>
-      <button onClick={handleLogout}>Logout</button>
+    <nav className="bg-black text-yellow-400 p-4 flex justify-between">
+      <Link href="/">Legal Chain</Link>
+      <div className="space-x-4">
+        <Link href="/dashboard">Dashboard</Link>
+        <button onClick={handleLogout} className="hover:underline">
+          Logout
+        </button>
+      </div>
     </nav>
   );
 }

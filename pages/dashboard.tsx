@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import DocumentUploader from '../components/DocumentUploader';
 import AnalysisResult from '../components/AnalysisResult';
-import axios from 'axios';
+import supabase from '../lib/supabaseClient';
 
 interface Document {
   id: string;
-  name: string;
-  status: string;
+  fileName: string;
+  url: string;
+  analysis?: string;
+  createdAt: string;
 }
 
 interface Analysis {
@@ -21,33 +23,64 @@ const Dashboard: React.FC = () => {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
+  const fetchDocuments = async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/docs`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      setDocuments(data);
+  };
+
   useEffect(() => {
     fetchDocuments();
   }, []);
 
-  const fetchDocuments = async () => {
-    setLoading(true);
+  const handleDelete = async (id: string) => {
     try {
-      const res = await axios.get('/api/docs');
-      setDocuments(res.data as Document[]);
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/docs/delete/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      fetchDocuments();
     } catch (err) {
-      console.error('Error fetching documents:', err);
-    } finally {
-      setLoading(false);
+      console.error('Delete failed:', err);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    await axios.delete(`/api/docs/delete/${id}`);
-    fetchDocuments();
-  };
-
-  const handleAnalyze = async (id: string) => {
-    setSelectedDocId(id);
+  const handleAnalyze = async (docId: string) => {
+    setSelectedDocId(docId);
     setAnalysis(null);
+
     try {
-      const res = await axios.post('/api/ai/analyze', { id });
-      setAnalysis(res.data as Analysis);
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
+
+      // Temporary placeholder — replace with actual text from file if needed
+      const dummyText = "This is a placeholder text from the document to analyze.";
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/analyze`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: dummyText }),
+      });
+
+      const data = await res.json();
+      setAnalysis(data);
     } catch (err) {
       console.error('Analysis failed:', err);
     }
@@ -71,8 +104,8 @@ const Dashboard: React.FC = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {documents.map((doc) => (
             <div key={doc.id} className="bg-[#1a1a1a] p-5 rounded shadow">
-              <p className="font-semibold">{doc.name}</p>
-              <p className="text-sm text-gray-400 mb-3">Status: {doc.status}</p>
+              <p className="font-semibold break-all">{doc.fileName}</p>
+              <p className="text-sm text-gray-400 mb-3">Uploaded: {new Date(doc.createdAt).toLocaleString()}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleAnalyze(doc.id)}

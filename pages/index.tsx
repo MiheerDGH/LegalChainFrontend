@@ -1,3 +1,4 @@
+//index.tsx
 import React from 'react';
 import HeroHeader from '@/components/ui/HeroHeader';
 import PracticeAreas from '@/components/ui/PracticeAreas';

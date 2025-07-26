@@ -1,3 +1,4 @@
+//api.ts
 export async function uploadDocument(file: File, token: string) {
   const formData = new FormData();
   formData.append('file', file);
