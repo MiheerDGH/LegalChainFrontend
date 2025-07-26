@@ -67,8 +67,6 @@ const Dashboard: React.FC = () => {
       const session = await supabase.auth.getSession();
       const token = session.data?.session?.access_token;
 
-      // Temporary placeholder — replace with actual text from file if needed
-      const dummyText = "This is a placeholder text from the document to analyze.";
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/analyze`, {
         method: 'POST',
@@ -76,7 +74,7 @@ const Dashboard: React.FC = () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: dummyText }),
+        body: JSON.stringify({ id: docId }),
       });
 
       const data = await res.json();
