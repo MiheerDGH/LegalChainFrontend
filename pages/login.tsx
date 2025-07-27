@@ -6,19 +6,30 @@ import Link from 'next/link';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✨ Prefill inputs if redirected from signup
+  // Prefill from sessionStorage or localStorage
   useEffect(() => {
-    const savedEmail = sessionStorage.getItem('tempLoginEmail');
-    const savedPassword = sessionStorage.getItem('tempLoginPassword');
+    const tempEmail = sessionStorage.getItem('tempLoginEmail');
+    const tempPassword = sessionStorage.getItem('tempLoginPassword');
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    const rememberedPassword = localStorage.getItem('rememberedPassword');
 
-    if (savedEmail) setEmail(savedEmail);
-    if (savedPassword) setPassword(savedPassword);
+    if (tempEmail) setEmail(tempEmail);
+    else if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
 
-    // Clear after prefill
+    if (tempPassword) setPassword(tempPassword);
+    else if (rememberedPassword) {
+      setPassword(rememberedPassword);
+      setRememberMe(true);
+    }
+
     sessionStorage.removeItem('tempLoginEmail');
     sessionStorage.removeItem('tempLoginPassword');
   }, []);
@@ -37,6 +48,15 @@ export default function LoginPage() {
     }
 
     if (data?.user) {
+      // 🌟 Store creds if "Remember me" checked
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberedPassword', password);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('rememberedPassword');
+      }
+
       router.push('/');
     }
   };
@@ -67,7 +87,12 @@ export default function LoginPage() {
 
           <div className="flex flex-col items-center gap-2 w-64 mx-auto text-sm text-yellow-300 mt-2">
             <label className="flex items-center gap-2">
-              <input type="checkbox" className="accent-yellow-500" />
+              <input
+                type="checkbox"
+                className="accent-yellow-500"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
               Remember me
             </label>
             <Link href="/forgot-password" className="hover:underline">

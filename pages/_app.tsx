@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import '../styles/globals.css';
 
-// Auth wrapper to gate pages
+// Auth wrapper to gate protected pages
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isLoading, session } = useSessionContext();
   const router = useRouter();
@@ -17,19 +17,33 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, session]);
 
-  if (isLoading || !session) return null; // Prevent content flash
+  if (isLoading || !session) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#111] text-white">
+        <p className="text-sm text-gray-400">Checking authentication...</p>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   const [supabaseClient] = useState(() => createPagesBrowserClient());
+  const router = useRouter();
+
+  const publicRoutes = ['/', '/login', '/signup'];
+  const isProtected = !publicRoutes.includes(router.pathname);
 
   return (
     <SessionContextProvider supabaseClient={supabaseClient}>
-      <AuthGuard>
+      {isProtected ? (
+        <AuthGuard>
+          <Component {...pageProps} />
+        </AuthGuard>
+      ) : (
         <Component {...pageProps} />
-      </AuthGuard>
+      )}
     </SessionContextProvider>
   );
 }
