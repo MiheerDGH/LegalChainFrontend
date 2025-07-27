@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
 import Link from 'next/link';
@@ -9,6 +9,19 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // ✨ Prefill inputs if redirected from signup
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem('tempLoginEmail');
+    const savedPassword = sessionStorage.getItem('tempLoginPassword');
+
+    if (savedEmail) setEmail(savedEmail);
+    if (savedPassword) setPassword(savedPassword);
+
+    // Clear after prefill
+    sessionStorage.removeItem('tempLoginEmail');
+    sessionStorage.removeItem('tempLoginPassword');
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +37,7 @@ export default function LoginPage() {
     }
 
     if (data?.user) {
-      router.push('/dashboard'); // or '/' if you'd prefer homepage
+      router.push('/dashboard');
     }
   };
 
@@ -84,7 +97,7 @@ export default function LoginPage() {
           <Link href="/signup">
             <span className="text-yellow-400 hover:underline">Sign up now</span>
           </Link>
-</p>
+        </p>
       </div>
     </div>
   );

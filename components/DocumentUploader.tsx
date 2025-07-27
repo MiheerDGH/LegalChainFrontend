@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { uploadDocument } from '../lib/api';
 import supabase from '../lib/supabaseClient';
 
 const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }) => {
@@ -14,6 +13,7 @@ const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }
 
   const handleUpload = async () => {
     if (!file) return;
+
     try {
       setStatus('Uploading...');
 
@@ -28,7 +28,7 @@ const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('https://legalchainbackend.onrender.com/api/docs/upload', {
+      const res = await fetch('/api/docs/upload', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -37,15 +37,18 @@ const DocumentUploader = ({ onUploadComplete }: { onUploadComplete: () => void }
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Upload failed');
+        const text = await res.text();
+        const isHTML = text.startsWith('<!DOCTYPE');
+
+        throw new Error(isHTML ? 'Server returned HTML instead of JSON' : text);
       }
+
       setStatus('Upload successful!');
       setFile(null);
       onUploadComplete();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed:', err);
-      setStatus('Upload failed. Try again.');
+      setStatus(err.message || 'Upload failed. Try again.');
     }
   };
 

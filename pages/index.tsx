@@ -1,12 +1,24 @@
-//index.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useUser } from '@clerk/nextjs';
+
 import HeroHeader from '@/components/ui/HeroHeader';
 import PracticeAreas from '@/components/ui/PracticeAreas';
 import WhyLegalChain from '@/components/ui/WhyLegalChain';
 import Footer from '@/components/ui/Footer';
 
-
 export default function HomePage() {
+  const { isSignedIn } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      router.push('/login');
+    }
+  }, [isSignedIn]);
+
+  if (!isSignedIn) return null; // Prevent flash of content before redirect
+
   return (
     <main className="bg-[#111] text-white font-sans min-h-screen">
       {/* Header */}
@@ -15,7 +27,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section
         className="relative text-center px-6 py-28 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/library.jpg')" }} // Ensure this exists in public/images
+        style={{ backgroundImage: "url('/images/library.jpg')" }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-60 z-0"></div>
         <div className="relative z-10">
@@ -26,7 +38,7 @@ export default function HomePage() {
             Smarter Contracts, Smarter Future
           </h2>
           <p className="max-w-4xl mx-auto text-lg text-gray-300">
-            Legal Chain is revolutionizing the legal landscape by democratizing law for all! We empower individuals, freelancers, SMBs, law firms, enterprise users, and everyone in between with accessible and efficient legal solutions. Legal Chain delivers smarter contracts for a smarter future, providing advanced legal document solutions quickly and accurately. Our platform harnesses a proprietary, multimodal cutting-edge AI technology for swift document processing, while our user-friendly interface enhances access to legally binding document creation to meet diverse personal and business needs. Offering a broad selection of AI-driven legal products, Legal Chain is your trusted companion in navigating the complexities of the legal world.
+            Legal Chain is revolutionizing the legal landscape by democratizing law for all! We empower individuals, freelancers, SMBs, law firms, enterprise users, and everyone in between with accessible and efficient legal solutions...
           </p>
         </div>
       </section>

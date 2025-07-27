@@ -11,8 +11,17 @@ export default function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.auth.signUp({ email, password });
-    if (!error) router.push('/dashboard');
-    else setError(error.message);
+
+    if (!error) {
+      // ✨ Temporarily store credentials (only for dev/staging)
+      sessionStorage.setItem('tempLoginEmail', email);
+      sessionStorage.setItem('tempLoginPassword', password);
+
+      // ✨ Redirect to login for pre-filled auth flow
+      router.push('/login');
+    } else {
+      setError(error.message);
+    }
   };
 
   return (
