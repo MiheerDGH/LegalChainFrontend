@@ -6,7 +6,7 @@ import supabase from '../lib/supabaseClient';
 
 interface Document {
   id: string;
-  name: string; // changed from fileName to match backend
+  name: string;
   url: string;
   analysis?: string;
   createdAt: string;
@@ -25,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [hasUploaded, setHasUploaded] = useState(false); // 🆕 track upload trigger
   const router = useRouter();
 
   const fetchDocuments = async () => {
@@ -56,6 +57,11 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  const handleUploadComplete = async () => {
+    setHasUploaded(true); // 🆕 flip to true
+    await fetchDocuments();
+  };
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -122,53 +128,56 @@ const Dashboard: React.FC = () => {
 
       {/* Upload Component */}
       <div className="mb-10">
-        <DocumentUploader onUploadComplete={fetchDocuments} />
+        <DocumentUploader onUploadComplete={handleUploadComplete} />
       </div>
 
-      {/* Documents Grid */}
-      {loading ? (
-        <p>Loading documents...</p>
-      ) : documents.length === 0 ? (
-        <p className="text-gray-400">You haven&apos;t uploaded any documents yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {documents.map((doc) => (
-            <div key={doc.id} className="bg-[#1a1a1a] p-5 rounded shadow">
-              <p className="font-semibold break-all">{doc.name}</p>
-              <p className="text-sm text-gray-400 mb-3">
-                Uploaded: {new Date(doc.createdAt).toLocaleString()}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleAnalyze(doc.id)}
-                  disabled={analyzingId === doc.id}
-                  className="bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-500"
-                >
-                  {analyzingId === doc.id ? 'Analyzing...' : 'Analyze'}
-                </button>
-                <button
-                  onClick={() => handleDelete(doc.id)}
-                  disabled={deletingId === doc.id}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                >
-                  {deletingId === doc.id ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
+      {/* Documents Grid & Analysis - conditional render */}
+      {hasUploaded && (
+        <>
+          {loading ? (
+            <p>Loading documents...</p>
+          ) : documents.length === 0 ? (
+            <p className="text-gray-400">No documents found.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {documents.map((doc) => (
+                <div key={doc.id} className="bg-[#1a1a1a] p-5 rounded shadow">
+                  <p className="font-semibold break-all">{doc.name}</p>
+                  <p className="text-sm text-gray-400 mb-3">
+                    Uploaded: {new Date(doc.createdAt).toLocaleString()}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAnalyze(doc.id)}
+                      disabled={analyzingId === doc.id}
+                      className="bg-yellow-400 text-black px-3 py-1 rounded hover:bg-yellow-500"
+                    >
+                      {analyzingId === doc.id ? 'Analyzing...' : 'Analyze'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(doc.id)}
+                      disabled={deletingId === doc.id}
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    >
+                      {deletingId === doc.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* AI Analysis Output */}
-      {analysis && selectedDocId && (
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-4">Analysis Result</h2>
-          <AnalysisResult data={analysis} />
-        </div>
+          {/* AI Analysis Output */}
+          {analysis && selectedDocId && (
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold mb-4">Analysis Result</h2>
+              <AnalysisResult data={analysis} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 };
 
 export default Dashboard;
-

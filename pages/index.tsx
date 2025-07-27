@@ -1,27 +1,38 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useUser } from '@clerk/nextjs';
+import { useSessionContext } from '@supabase/auth-helpers-react';
 
 import HeroHeader from '@/components/ui/HeroHeader';
 import PracticeAreas from '@/components/ui/PracticeAreas';
 import WhyLegalChain from '@/components/ui/WhyLegalChain';
 import Footer from '@/components/ui/Footer';
+import Spinner from '@/components/ui/Spinner';
 
 export default function HomePage() {
-  const { isSignedIn } = useUser();
+  const { session, isLoading } = useSessionContext();
   const router = useRouter();
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn) {
-      router.push('/login');
+    if (!isLoading) {
+      if (!session) {
+        router.push('/login');
+      } else {
+        setShowContent(true);
+      }
     }
-  }, [isSignedIn]);
+  }, [isLoading, session]);
 
-  if (!isSignedIn) return null; // Prevent flash of content before redirect
+  if (isLoading || !showContent) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#111]">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <main className="bg-[#111] text-white font-sans min-h-screen">
-      {/* Header */}
       <HeroHeader />
 
       {/* Hero Section */}
@@ -49,10 +60,7 @@ export default function HomePage() {
         <PracticeAreas />
       </section>
 
-      {/* Why Legal Chain */}
       <WhyLegalChain />
-
-      {/* Footer */}
       <Footer />
     </main>
   );
