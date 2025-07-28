@@ -15,7 +15,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!isLoading && !session) {
       router.push('/login');
     }
-  }, [isLoading, session]);
+  }, [isLoading, session, router]);
 
   if (isLoading || !session) {
     return (

@@ -21,7 +21,7 @@ export default function HomePage() {
         setShowContent(true);
       }
     }
-  }, [isLoading, session]);
+  }, [isLoading, session, router]);
 
   if (isLoading || !showContent) {
     return (

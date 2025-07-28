@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import DocumentUploader from '../components/DocumentUploader';
 import AnalysisResult from '../components/AnalysisResult';
@@ -28,7 +28,7 @@ const Dashboard: React.FC = () => {
   const [hasUploaded, setHasUploaded] = useState(false); // 🆕 track upload trigger
   const router = useRouter();
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
       const session = await supabase.auth.getSession();
@@ -52,11 +52,11 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
 
   const handleUploadComplete = async () => {
     setHasUploaded(true); // 🆕 flip to true

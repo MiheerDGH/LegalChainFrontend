@@ -54,9 +54,11 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
       setStatus('✅ Upload successful!');
       setFile(null);
       onUploadComplete(); // 🔁 trigger dashboard refresh
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = 
+        err instanceof Error ? err.message : '❌ Upload failed.';
       console.error('Upload failed:', err);
-      setStatus(err.message || '❌ Upload failed. Try again.');
+      setStatus(errorMessage);
     } finally {
       setUploading(false);
     }
