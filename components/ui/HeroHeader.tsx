@@ -29,12 +29,12 @@ export default function HeroHeader() {
 
         {/* Navigation */}
         <nav className="md:mt-0">
-          <ul className="flex flex-wrap justify-center md:justify-end gap-5 text-sm font-medium">
+          <ul className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2 text-sm font-medium">
             {navItems.map((item) => (
               <li key={item}>
                 <Link
                   href="/"
-                  className="text-gray-300 hover:text-yellow-400 transition duration-200 ease-in-out"
+                  className="text-gray-300 hover:text-yellow-400 px-2 py-1 rounded hover:bg-[#2a2a2a] transition duration-200 ease-in-out"
                 >
                   {item}
                 </Link>
