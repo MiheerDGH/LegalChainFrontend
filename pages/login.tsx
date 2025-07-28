@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Prefill from sessionStorage or localStorage
   useEffect(() => {
     const tempEmail = sessionStorage.getItem('tempLoginEmail');
     const tempPassword = sessionStorage.getItem('tempLoginPassword');
@@ -48,7 +47,6 @@ export default function LoginPage() {
     }
 
     if (data?.user) {
-      // 🌟 Store creds if "Remember me" checked
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email);
         localStorage.setItem('rememberedPassword', password);
@@ -56,73 +54,81 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedEmail');
         localStorage.removeItem('rememberedPassword');
       }
-
       router.push('/');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-black px-4">
-      <div className="bg-[#111] text-yellow-100 w-full max-w-md p-8 rounded-xl shadow-[0_0_30px_rgba(255,215,0,0.2)] border border-yellow-700">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6 text-center tracking-wide">LOGIN</h1>
+    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-gradient-to-tr from-yellow-500 to-yellow-300 rounded-xl p-[2px]">
+        <div className="bg-black rounded-xl p-6 shadow-xl text-white">
+          <h1 className="text-2xl font-bold text-white text-center mb-2">Legal Chain</h1>
+          <p className="text-gray-400 text-center mb-6 text-sm">Sign in to your account</p>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-64 mx-auto block px-4 py-4 rounded-md bg-black border border-yellow-600 text-yellow-100 placeholder-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-64 mx-auto block px-4 py-4 rounded-md bg-black border border-yellow-600 text-yellow-100 placeholder-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-          />
-
-          <div className="flex flex-col items-center gap-2 w-64 mx-auto text-sm text-yellow-300 mt-2">
-            <label className="flex items-center gap-2">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
               <input
-                type="checkbox"
-                className="accent-yellow-500"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
+                type="email"
+                aria-label="Email"
+                placeholder="user@example.com"
+                className="w-full bg-transparent border border-gray-700 text-white px-4 py-3 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
-              Remember me
-            </label>
-            <Link href="/forgot-password" className="hover:underline">
-              Forgot password?
+            </div>
+
+            <div>
+              <input
+                type="password"
+                aria-label="Password"
+                placeholder="Your Password"
+                className="w-full bg-transparent border border-gray-700 text-white px-4 py-3 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="flex justify-between items-center text-sm text-gray-400">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-yellow-500"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                Remember me
+              </label>
+              <Link href="/forgot-password" className="hover:underline text-yellow-400">
+                Forgot password?
+              </Link>
+            </div>
+
+            <button
+              type="submit"
+              className={`w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-full transition transform ${
+                loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02]'
+              }`}
+              disabled={loading}
+            >
+              {loading ? 'Logging in...' : '→'}
+            </button>
+
+            {error && (
+              <p className="text-red-500 text-sm text-center border border-red-700 rounded p-2 bg-red-900/20 mt-2">
+                {error}
+              </p>
+            )}
+          </form>
+
+          <p className="text-center text-sm text-gray-400 mt-6">
+            Don’t have an account?{' '}
+            <Link href="/signup" className="text-yellow-400 font-medium hover:underline">
+              Sign up
             </Link>
-          </div>
-
-          <button
-            type="submit"
-            className={`w-64 mx-auto block bg-gradient-to-r from-yellow-500 to-yellow-400 text-black py-3 rounded-md font-bold transition shadow hover:shadow-yellow-400/30 mt-4 ${
-              loading ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-110'
-            }`}
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'LOGIN'}
-          </button>
-
-          {error && (
-            <p className="text-red-500 text-sm text-center border border-red-500 rounded p-2 bg-red-900/20 w-64 mx-auto mt-2">
-              {error}
-            </p>
-          )}
-        </form>
-
-        <p className="text-center text-sm text-yellow-300 mt-6">
-          Not a member?{' '}
-          <Link href="/signup">
-            <span className="text-yellow-400 hover:underline">Sign up now</span>
-          </Link>
-        </p>
+          </p>
+        </div>
       </div>
     </div>
   );

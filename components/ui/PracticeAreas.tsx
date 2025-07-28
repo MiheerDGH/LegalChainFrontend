@@ -24,22 +24,48 @@ const areas = [
 
 export default function PracticeAreas() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {areas.map((area, idx) => (
         <div
           key={idx}
-          className="bg-[#1a1a1a] p-6 rounded-md shadow hover:shadow-lg transition duration-300 text-white"
+          className="bg-white shadow-lg rounded-xl p-6 transition duration-300 hover:shadow-xl text-gray-800"
         >
-          <div className="text-yellow-400 mb-4">{area.icon}</div>
-          <h4 className="font-bold uppercase mb-2">{area.title}</h4>
-          <p className="text-gray-300 mb-2">{area.desc}</p>
-          {area.title === 'Document Analysis' ? (
-            <Link href="/dashboard" className="text-yellow-400 text-sm hover:underline cursor-pointer">
-              Read More
-            </Link>
-          ) : (
-            <span className="text-yellow-400 text-sm hover:underline cursor-pointer">Read More</span>
-          )}
+          {/* Icon container */}
+          <div className="flex items-center justify-start mb-6 text-yellow-400">
+            {area.title === 'Contract Creation' ? (
+              <Link
+                href="/contract"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              >
+                {area.icon}
+              </Link>
+            ) : area.title === 'Document Analysis' ? (
+              <Link
+                href="/dashboard"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {area.icon}
+              </Link>
+            ) : (
+              area.icon
+            )}
+          </div>
+
+          {/* Title */}
+          <h4 className="font-bold uppercase mb-3">{area.title}</h4>
+
+          {/* Description */}
+          <p className="text-gray-600 mb-4">{area.desc}</p>
+
+          {/* CTA */}
+          <span
+            className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+            aria-label={`Learn more about ${area.title}`}
+          >
+            Read More
+          </span>
         </div>
       ))}
     </div>
