@@ -34,11 +34,7 @@ export default function ContractCreationPage() {
     setLoading(true);
 
     try {
-      // Fetch the current Supabase user session to retrieve access token
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
         alert('You must be signed in to generate a contract.');
