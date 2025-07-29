@@ -1,5 +1,11 @@
-import { useState } from 'react';
+// ContractCreationPage.tsx
+// This page allows authenticated users to generate a contract using OpenAI via the backend API.
+// The user fills out a form, and the data is sent with a Supabase auth token for backend validation.
 
+import { useState } from 'react';
+import supabase from '../lib/supabaseClient'; // Supabase client for auth
+
+// List of predefined jurisdictions for contract law selection
 const jurisdictions = [
   { id: 'US-CA', label: 'California, United States' },
   { id: 'US-NY', label: 'New York, United States' },
@@ -11,27 +17,68 @@ const jurisdictions = [
 ];
 
 export default function ContractCreationPage() {
+  // State variables to capture form input values
   const [partyA, setPartyA] = useState('');
   const [partyB, setPartyB] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
-  const [clauses, setClauses] = useState(['']);
+  const [clauses, setClauses] = useState(['']); // Allow user to add multiple clauses
   const [jurisdiction, setJurisdiction] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [contract, setContract] = useState('');
+  const [loading, setLoading] = useState(false); // Tracks loading state during API call
+  const [contract, setContract] = useState('');  // Stores the generated contract text
+  const [contractType, setContractType] = useState('Standard Contract');
 
+
+  // Function to handle form submission and make API call
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const res = await fetch('/api/ai/generateContract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partyA, partyB, effectiveDate, clauses, jurisdiction }),
-    });
+    try {
+      // Fetch the current Supabase user session to retrieve access token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const data = await res.json();
-    setContract(data.contract || '');
-    setLoading(false);
+      const token = session?.access_token;
+      if (!token) {
+        alert('You must be signed in to generate a contract.');
+        setLoading(false);
+        return;
+      }
+
+      // Call backend route with contract data and Supabase Bearer token
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/generateContract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // Send Supabase JWT to backend for user validation
+        },
+        body: JSON.stringify({
+          contractType,
+          partyA,
+          partyB,
+          effectiveDate,
+          clauses,
+          jurisdiction,
+        }),
+      });
+
+      // Handle server errors
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.message || 'Server returned an error.');
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setContract(data.result || ''); // Display generated contract
+    } catch (err) {
+      console.error(err);
+      alert('Unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,12 +87,11 @@ export default function ContractCreationPage() {
         <h1 className="text-2xl font-bold mb-4 text-center">Contract Generator</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Party A */}
+          {/* Input: Party A */}
           <div>
             <label className="block font-medium mb-1">Party A</label>
             <input
               type="text"
-              aria-label="Party A"
               placeholder="e.g. Client Company LLC"
               className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
               value={partyA}
@@ -54,12 +100,23 @@ export default function ContractCreationPage() {
             />
           </div>
 
-          {/* Party B */}
+          {/* Contract Type */}
+          <div>
+            <label className="block font-medium mb-1">Contract Type</label>
+            <input
+              type="text"
+              placeholder="e.g. Service Agreement"
+              className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
+              value={contractType}
+              onChange={(e) => setContractType(e.target.value)}
+              required
+            />
+          </div>
+          {/* Input: Party B */}
           <div>
             <label className="block font-medium mb-1">Party B</label>
             <input
               type="text"
-              aria-label="Party B"
               placeholder="e.g. Legal Partner Inc."
               className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
               value={partyB}
@@ -68,12 +125,11 @@ export default function ContractCreationPage() {
             />
           </div>
 
-          {/* Effective Date */}
+          {/* Input: Effective Date */}
           <div>
             <label className="block font-medium mb-1">Effective Date</label>
             <input
               type="date"
-              aria-label="Effective Date"
               className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
               value={effectiveDate}
               onChange={(e) => setEffectiveDate(e.target.value)}
@@ -81,18 +137,16 @@ export default function ContractCreationPage() {
             />
           </div>
 
-          {/* Jurisdiction */}
+          {/* Dropdown: Jurisdiction */}
           <div>
             <label htmlFor="jurisdiction" className="block font-medium mb-1">
               Jurisdiction (Governing Law)
             </label>
             <select
               id="jurisdiction"
-              name="jurisdiction"
               value={jurisdiction}
               onChange={(e) => setJurisdiction(e.target.value)}
               className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
-              aria-label="Select Jurisdiction"
               required
             >
               <option value="">Select a state or country</option>
@@ -102,17 +156,19 @@ export default function ContractCreationPage() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">The legal region whose laws apply to this agreement.</p>
+            <p className="text-xs text-gray-500 mt-1">
+              The legal region whose laws apply to this agreement.
+            </p>
           </div>
 
-          {/* Clause Inputs */}
+          {/* Dynamic Input: Clause Types */}
           <div>
             <label className="block font-medium mb-1">Clause Types</label>
             {clauses.map((clause, index) => (
               <input
                 key={index}
                 type="text"
-                placeholder={`Clause ${index + 1} (e.g. Termination, Indemnity)`}
+                placeholder={`Clause ${index + 1}`}
                 className="w-full border px-4 py-2 rounded-md mb-2 focus:ring focus:ring-blue-500"
                 value={clause}
                 onChange={(e) => {
@@ -143,7 +199,7 @@ export default function ContractCreationPage() {
           </button>
         </form>
 
-        {/* Contract Output */}
+        {/* Display: Generated Contract Output */}
         {contract && (
           <div className="mt-8 border-t pt-6">
             <h2 className="text-xl font-bold mb-2">Generated Contract:</h2>

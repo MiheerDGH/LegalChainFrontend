@@ -31,8 +31,17 @@ export default function PracticeAreas() {
           className="bg-white shadow-lg rounded-xl p-6 transition duration-300 hover:shadow-xl text-gray-800"
         >
           {/* Icon container */}
+          
           <div className="flex items-center justify-start mb-6 text-yellow-400">
-            {area.title === 'Contract Creation' ? (
+            {area.title === 'NDA Creation' ? (
+              <Link
+                href="/features/nda"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              >
+                {area.icon}
+              </Link>
+            ) : area.title === 'Contract Creation' ? (
               <Link
                 href="/contract"
                 aria-label={`Go to ${area.title}`}
@@ -48,9 +57,53 @@ export default function PracticeAreas() {
               >
                 {area.icon}
               </Link>
+            ) : area.title === 'Document Management' ? (
+              <Link
+                href="/features/management"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {area.icon}
+              </Link>
+            ) : area.title === 'Document Summary' ?(
+              <>
+                <Link
+                  href="/features/summary"
+                  aria-label={`Go to ${area.title}`}
+                  className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  {area.icon}
+                </Link>
+
+              </>
+            ) : area.title === 'Document Comparison' ? (
+              <Link
+                href="/features/comparison"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {area.icon}
+              </Link>
+            ) : area.title === 'Legal Review' ? (
+              <Link
+                href="/features/legal-review"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {area.icon}   
+              </Link>
+            ) : area.title === 'Translation' ? (
+              <Link
+                href="/features/translation"
+                aria-label={`Go to ${area.title}`}
+                className="focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {area.icon}   
+              </Link>
             ) : (
-              area.icon
+              <span className="text-gray-400">{area.icon}</span>
             )}
+
           </div>
 
           {/* Title */}
