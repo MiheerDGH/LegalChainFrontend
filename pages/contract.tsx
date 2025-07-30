@@ -46,12 +46,8 @@ export default function ContractCreationPage() {
         return;
       }
 
-<<<<<<< HEAD
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/generateContract`, {
-=======
       // Call backend route with contract data and Supabase Bearer token
       const res = await fetch(`/api/ai/generateContract`, {
->>>>>>> 546897f1c9a75902a459b4776869803f3b384e12
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
