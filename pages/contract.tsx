@@ -1,11 +1,7 @@
-// ContractCreationPage.tsx
-// This page allows authenticated users to generate a contract using OpenAI via the backend API.
-// The user fills out a form, and the data is sent with a Supabase auth token for backend validation.
-
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router'; // 👈 Add router for redirect
 import supabase from '../lib/supabaseClient'; // Supabase client for auth
 
-// List of predefined jurisdictions for contract law selection
 const jurisdictions = [
   { id: 'US-CA', label: 'California, United States' },
   { id: 'US-NY', label: 'New York, United States' },
@@ -17,18 +13,26 @@ const jurisdictions = [
 ];
 
 export default function ContractCreationPage() {
-  // State variables to capture form input values
+  const router = useRouter(); // Initialize router
+
+  // 🚨 Redirect if user not authenticated
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) router.push('/login');
+    };
+    checkSession();
+  }, [router]);
+
   const [partyA, setPartyA] = useState('');
   const [partyB, setPartyB] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
-  const [clauses, setClauses] = useState(['']); // Allow user to add multiple clauses
+  const [clauses, setClauses] = useState(['']);
   const [jurisdiction, setJurisdiction] = useState('');
-  const [loading, setLoading] = useState(false); // Tracks loading state during API call
-  const [contract, setContract] = useState('');  // Stores the generated contract text
+  const [loading, setLoading] = useState(false);
+  const [contract, setContract] = useState('');
   const [contractType, setContractType] = useState('Standard Contract');
 
-
-  // Function to handle form submission and make API call
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -42,12 +46,11 @@ export default function ContractCreationPage() {
         return;
       }
 
-      // Call backend route with contract data and Supabase Bearer token
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/generateContract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // Send Supabase JWT to backend for user validation
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           contractType,
@@ -59,7 +62,6 @@ export default function ContractCreationPage() {
         }),
       });
 
-      // Handle server errors
       if (!res.ok) {
         const error = await res.json();
         alert(error.message || 'Server returned an error.');
@@ -68,7 +70,7 @@ export default function ContractCreationPage() {
       }
 
       const data = await res.json();
-      setContract(data.result || ''); // Display generated contract
+      setContract(data.result || '');
     } catch (err) {
       console.error(err);
       alert('Unexpected error occurred.');
@@ -77,13 +79,13 @@ export default function ContractCreationPage() {
     }
   };
 
+  // 🧱 Your exact HTML and form layout preserved below
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 p-6 flex items-center justify-center">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-4 text-center">Contract Generator</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Input: Party A */}
           <div>
             <label className="block font-medium mb-1">Party A</label>
             <input
@@ -96,7 +98,6 @@ export default function ContractCreationPage() {
             />
           </div>
 
-          {/* Contract Type */}
           <div>
             <label className="block font-medium mb-1">Contract Type</label>
             <input
@@ -108,7 +109,7 @@ export default function ContractCreationPage() {
               required
             />
           </div>
-          {/* Input: Party B */}
+
           <div>
             <label className="block font-medium mb-1">Party B</label>
             <input
@@ -121,7 +122,6 @@ export default function ContractCreationPage() {
             />
           </div>
 
-          {/* Input: Effective Date */}
           <div>
             <label className="block font-medium mb-1">Effective Date</label>
             <input
@@ -133,7 +133,6 @@ export default function ContractCreationPage() {
             />
           </div>
 
-          {/* Dropdown: Jurisdiction */}
           <div>
             <label htmlFor="jurisdiction" className="block font-medium mb-1">
               Jurisdiction (Governing Law)
@@ -157,7 +156,6 @@ export default function ContractCreationPage() {
             </p>
           </div>
 
-          {/* Dynamic Input: Clause Types */}
           <div>
             <label className="block font-medium mb-1">Clause Types</label>
             {clauses.map((clause, index) => (
@@ -183,7 +181,6 @@ export default function ContractCreationPage() {
             </button>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -195,7 +192,6 @@ export default function ContractCreationPage() {
           </button>
         </form>
 
-        {/* Display: Generated Contract Output */}
         {contract && (
           <div className="mt-8 border-t pt-6">
             <h2 className="text-xl font-bold mb-2">Generated Contract:</h2>
