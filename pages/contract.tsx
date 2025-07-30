@@ -43,12 +43,13 @@ export default function ContractCreationPage() {
       }
 
       // Call backend route with contract data and Supabase Bearer token
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/generateContract`, {
+      const res = await fetch(`/api/ai/generateContract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`, // Send Supabase JWT to backend for user validation
         },
+        credentials: 'include',
         body: JSON.stringify({
           contractType,
           partyA,
