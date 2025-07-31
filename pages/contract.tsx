@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router'; // 👈 Add router for redirect
-import supabase from '../lib/supabaseClient'; // Supabase client for auth
+import { useRouter } from 'next/router';
+import supabase from '../lib/supabaseClient';
 
 const jurisdictions = [
   { id: 'US-CA', label: 'California, United States' },
@@ -13,9 +13,8 @@ const jurisdictions = [
 ];
 
 export default function ContractCreationPage() {
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
 
-  // 🚨 Redirect if user not authenticated
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -46,7 +45,6 @@ export default function ContractCreationPage() {
         return;
       }
 
-      // Call backend route with contract data and Supabase Bearer token
       const res = await fetch(`/api/ai/generateContract`, {
         method: 'POST',
         headers: {
@@ -81,7 +79,6 @@ export default function ContractCreationPage() {
     }
   };
 
-  // 🧱 Your exact HTML and form layout preserved below
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 p-6 flex items-center justify-center">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
@@ -194,6 +191,7 @@ export default function ContractCreationPage() {
           </button>
         </form>
 
+        {/* Original inline preview remains if you want to preserve it */}
         {contract && (
           <div className="mt-8 border-t pt-6">
             <h2 className="text-xl font-bold mb-2">Generated Contract:</h2>
@@ -203,6 +201,39 @@ export default function ContractCreationPage() {
           </div>
         )}
       </div>
+
+      {/* 📄 Document Viewer (Modal Style, Non-Intrusive) */}
+      {contract && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white max-w-3xl w-full rounded-xl shadow-xl p-6 overflow-auto max-h-[90vh] relative">
+            <button
+              onClick={() => setContract('')}
+              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-xl font-bold"
+              aria-label="Close viewer"
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-4 text-center">📄 Generated Contract Preview</h2>
+            <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded border text-sm mb-4">
+              {contract}
+            </pre>
+            <button
+              onClick={() => {
+                const blob = new Blob([contract], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${contractType.replace(/\s+/g, '_')}_Contract.txt`;
+                link.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+            >
+              Download Contract
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
