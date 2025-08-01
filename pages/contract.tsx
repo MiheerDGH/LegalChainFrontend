@@ -45,7 +45,7 @@ export default function ContractCreationPage() {
         return;
       }
 
-      const res = await fetch(`/api/ai/generateContract`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/generateContract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
