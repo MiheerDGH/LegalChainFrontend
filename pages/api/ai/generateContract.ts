@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const payload = req.body;
-    console.log('📦 Payload received:', payload);
+    console.log('Payload received:', payload);
 
     let ndaText = '';
 
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ndaText = `This NDA is between ${payload.partyOne} and ${payload.partyTwo}, effective ${payload.effectiveDate}. It covers the following confidential information: ${payload.description}, and remains valid for ${payload.termLength} years.`;
     }
 
-    // 📁 Store NDA in Supabase
+    // Store NDA in Supabase
     const { data: savedDoc, error } = await supabase
       .from('documents')
       .insert([
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ nda: ndaText });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Generation error:', errorMessage);
+    console.error('Generation error:', errorMessage);
     return res.status(500).json({
       message: 'Failed to generate contract',
       detail: errorMessage,

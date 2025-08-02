@@ -123,7 +123,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#111] text-white px-6 py-10">
+    <div className="min-h-screen bg-white text-gray-800 px-6 py-10">
       <h1 className="text-3xl font-bold mb-8">Your Legal Documents</h1>
 
       {/* Upload Component */}

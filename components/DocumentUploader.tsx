@@ -22,13 +22,13 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
 
     try {
       setUploading(true);
-      setStatus('📤 Uploading...');
+      setStatus('Uploading...');
 
       const session = await supabase.auth.getSession();
       const token = session.data?.session?.access_token;
 
       if (!token) {
-        setStatus('🔒 Authentication error. Please log in again.');
+        setStatus('Authentication error. Please log in again.');
         setUploading(false);
         return;
       }
@@ -48,15 +48,15 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
       const isHTML = text.startsWith('<!DOCTYPE');
 
       if (!res.ok) {
-        throw new Error(isHTML ? '⚠️ Server returned HTML instead of JSON.' : text);
+        throw new Error(isHTML ? 'Server returned HTML instead of JSON.' : text);
       }
 
-      setStatus('✅ Upload successful!');
+      setStatus('Upload successful!');
       setFile(null);
-      onUploadComplete(); // 🔁 trigger dashboard refresh
+      onUploadComplete(); 
     } catch (err: unknown) {
       const errorMessage = 
-        err instanceof Error ? err.message : '❌ Upload failed.';
+        err instanceof Error ? err.message : 'Upload failed.';
       console.error('Upload failed:', err);
       setStatus(errorMessage);
     } finally {
@@ -65,8 +65,8 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
   };
 
   return (
-    <div className="bg-[#1a1a1a] p-6 rounded shadow text-white space-y-4">
-      <label className="block text-sm font-semibold text-yellow-400">
+    <div className="bg-white p-6 rounded shadow text-gray-800 space-y-4">
+      <label className="block text-sm font-semibold text-yellow-600">
         Upload a Legal Document (PDF/DOCX)
       </label>
 
@@ -75,7 +75,7 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
         accept=".pdf,.docx"
         onChange={handleFileChange}
         disabled={uploading}
-        className="w-full text-sm text-gray-300 file:bg-yellow-400 file:text-black file:rounded file:px-4 file:py-2 file:border-0 file:mr-3"
+        className="w-full text-sm text-gray-800 file:bg-yellow-400 file:text-black file:rounded file:px-4 file:py-2 file:border-0 file:mr-3"
       />
 
       <button
@@ -87,7 +87,7 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
       </button>
 
       {status && (
-        <p className="text-sm text-gray-400 transition-all duration-200">{status}</p>
+        <p className="text-sm text-gray-600 transition-all duration-200">{status}</p>
       )}
     </div>
   );
