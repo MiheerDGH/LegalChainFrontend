@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Store NDA in Supabase
     const { data: savedDoc, error } = await supabase
-      .from('documents')
+      .from('Document')
       .insert([
         {
           party_one: payload.partyOne,
