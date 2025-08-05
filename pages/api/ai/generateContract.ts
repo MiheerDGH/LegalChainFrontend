@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-const USE_EXTERNAL_GENERATOR = false; // toggle as needed
+const USE_EXTERNAL_GENERATOR = false;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,17 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const payload = req.body;
-    console.log('Payload received:', payload);
+    const {
+      contractType,
+      partyA,
+      partyB,
+      effectiveDate,
+      clauses,
+      jurisdiction,
+    } = req.body;
 
-    let ndaText = '';
+    let contractText = '';
 
     if (USE_EXTERNAL_GENERATOR) {
-      const externalUrl = process.env.NDA_API_URL || 'http://localhost:5000/generate-nda';
+      const externalUrl = process.env.CONTRACT_API_URL || 'http://localhost:5000/generate-contract';
       const response = await fetch(externalUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(req.body),
       });
 
       if (!response.ok) {
@@ -33,28 +39,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const data = await response.json();
-      ndaText = data.nda;
+      contractText = data.contract;
     } else {
-      ndaText = `This NDA is between ${payload.partyOne} and ${payload.partyTwo}, effective ${payload.effectiveDate}. It covers the following confidential information: ${payload.description}, and remains valid for ${payload.termLength} years.`;
+      contractText = `
+${contractType.toUpperCase()}
+
+This Agreement is entered into on ${effectiveDate} between ${partyA} ("Party A") and ${partyB} ("Party B").
+
+1. GOVERNING LAW
+This agreement is governed by the laws of ${jurisdiction}.
+
+2. CLAUSES
+${clauses.map((clause: string, idx: number) => `${idx + 1}. ${clause}`).join('\n')}
+
+IN WITNESS WHEREOF, the parties have executed this Agreement on the date written above.
+
+Party A: ${partyA}
+Party B: ${partyB}
+      `.trim();
     }
 
-    // Store NDA in Supabase
     const { data: savedDoc, error } = await supabase
       .from('Document')
       .insert([
         {
-          party_one: payload.partyOne,
-          party_two: payload.partyTwo,
-          nda_text: ndaText,
+          party_one: partyA,
+          party_two: partyB,
+          contract_text: contractText,
+          document_type: contractType,
         },
       ]);
 
     if (error) {
-      console.error('📉 Supabase insert failed:', error);
+      console.error('❌ Supabase insert failed:', error);
       return res.status(500).json({ message: 'Database error', detail: error.message });
     }
 
-    return res.status(200).json({ nda: ndaText });
+    // ✅ Return contract back to frontend
+    return res.status(200).json({ contract: contractText });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Generation error:', errorMessage);

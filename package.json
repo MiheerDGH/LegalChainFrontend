@@ -2,7 +2,7 @@
   "name": "legalchain-frontend",
   "version": "1.0.0",
   "scripts": {
-    "dev": "node --trace-warnings ./node_modules/next/dist/bin/next dev", 
+    "dev": "node --trace-warnings ./node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -11,6 +11,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "axios": "^1.10.0",
+    "html2pdf.js": "^0.10.3",
     "next": "^15.4.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

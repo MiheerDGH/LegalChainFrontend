@@ -15,14 +15,6 @@ const jurisdictions = [
 export default function ContractCreationPage() {
   const router = useRouter();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) router.push('/login');
-    };
-    checkSession();
-  }, [router]);
-
   const [partyA, setPartyA] = useState('');
   const [partyB, setPartyB] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
@@ -31,6 +23,14 @@ export default function ContractCreationPage() {
   const [loading, setLoading] = useState(false);
   const [contract, setContract] = useState('');
   const [contractType, setContractType] = useState('Standard Contract');
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) router.push('/login');
+    };
+    checkSession();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ export default function ContractCreationPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -62,15 +62,8 @@ export default function ContractCreationPage() {
         }),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        alert(error.message || 'Server returned an error.');
-        setLoading(false);
-        return;
-      }
-
       const data = await res.json();
-      setContract(data.result || '');
+      setContract(data.result || data.contract || 'No contract generated.');
     } catch (err) {
       console.error(err);
       alert('Unexpected error occurred.');
@@ -79,18 +72,41 @@ export default function ContractCreationPage() {
     }
   };
 
+  const downloadAsPDF = async () => {
+    const element = document.getElementById('contract-preview');
+    if (!element) return;
+
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    html2pdf().from(element).set({
+      margin: 0.5,
+      filename: `${contractType.replace(/\s+/g, '_')}_Contract.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {},
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+    }).save();
+  };
+
+  const downloadAsTXT = () => {
+    const blob = new Blob([contract], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${contractType.replace(/\s+/g, '_')}_Contract.txt`;
+    link.click();
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 p-6 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-100 text-gray-800 py-10 px-4 flex flex-col items-center">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
-        <h1 className="text-2xl font-bold mb-4 text-center">Contract Generator</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Contract Generator</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block font-medium mb-1">Party A</label>
             <input
               type="text"
+              className="w-full border px-4 py-3 rounded-md"
               placeholder="e.g. Client Company LLC"
-              className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
               value={partyA}
               onChange={(e) => setPartyA(e.target.value)}
               required
@@ -101,8 +117,8 @@ export default function ContractCreationPage() {
             <label className="block font-medium mb-1">Contract Type</label>
             <input
               type="text"
+              className="w-full border px-4 py-3 rounded-md"
               placeholder="e.g. Service Agreement"
-              className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
               value={contractType}
               onChange={(e) => setContractType(e.target.value)}
               required
@@ -113,8 +129,8 @@ export default function ContractCreationPage() {
             <label className="block font-medium mb-1">Party B</label>
             <input
               type="text"
+              className="w-full border px-4 py-3 rounded-md"
               placeholder="e.g. Legal Partner Inc."
-              className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
               value={partyB}
               onChange={(e) => setPartyB(e.target.value)}
               required
@@ -125,7 +141,7 @@ export default function ContractCreationPage() {
             <label className="block font-medium mb-1">Effective Date</label>
             <input
               type="date"
-              className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
+              className="w-full border px-4 py-3 rounded-md"
               value={effectiveDate}
               onChange={(e) => setEffectiveDate(e.target.value)}
               required
@@ -140,12 +156,12 @@ export default function ContractCreationPage() {
               id="jurisdiction"
               value={jurisdiction}
               onChange={(e) => setJurisdiction(e.target.value)}
-              className="w-full border px-4 py-3 rounded-md focus:ring focus:ring-blue-500"
+              className="w-full border px-4 py-3 rounded-md"
               required
             >
               <option value="">Select a state or country</option>
               {jurisdictions.map((j) => (
-                <option key={j.id} value={j.id}>
+                <option key={j.id} value={j.label}>
                   {j.label}
                 </option>
               ))}
@@ -161,8 +177,8 @@ export default function ContractCreationPage() {
               <input
                 key={index}
                 type="text"
+                className="w-full border px-4 py-2 rounded-md mb-2"
                 placeholder={`Clause ${index + 1}`}
-                className="w-full border px-4 py-2 rounded-md mb-2 focus:ring focus:ring-blue-500"
                 value={clause}
                 onChange={(e) => {
                   const updated = [...clauses];
@@ -174,7 +190,7 @@ export default function ContractCreationPage() {
             <button
               type="button"
               onClick={() => setClauses([...clauses, ''])}
-              className="text-sm text-blue-600 mt-2 hover:underline"
+              className="text-sm text-blue-600 hover:underline"
             >
               + Add Clause
             </button>
@@ -190,46 +206,31 @@ export default function ContractCreationPage() {
             {loading ? 'Generating...' : 'Generate Contract'}
           </button>
         </form>
-
-        {/* Original inline preview remains if you want to preserve it */}
-        {contract && (
-          <div className="mt-8 border-t pt-6">
-            <h2 className="text-xl font-bold mb-2">Generated Contract:</h2>
-            <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-md border text-sm">
-              {contract}
-            </pre>
-          </div>
-        )}
       </div>
 
-      {/* 📄 Document Viewer (Modal Style, Non-Intrusive) */}
+      {/* ✅ Inline Preview Section */}
       {contract && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white max-w-3xl w-full rounded-xl shadow-xl p-6 overflow-auto max-h-[90vh] relative">
+        <div className="bg-white mt-10 p-6 rounded-xl shadow-md w-full max-w-3xl">
+          <h2 className="text-xl font-bold mb-4">Generated Contract</h2>
+          <div
+            id="contract-preview"
+            className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed border p-4 rounded bg-gray-50"
+          >
+            {contract}
+          </div>
+
+          <div className="mt-4 flex justify-end gap-4">
             <button
-              onClick={() => setContract('')}
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-xl font-bold"
-              aria-label="Close viewer"
+              onClick={downloadAsPDF}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             >
-              &times;
+              Download PDF
             </button>
-            <h2 className="text-xl font-bold mb-4 text-center">📄 Generated Contract Preview</h2>
-            <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded border text-sm mb-4">
-              {contract}
-            </pre>
             <button
-              onClick={() => {
-                const blob = new Blob([contract], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${contractType.replace(/\s+/g, '_')}_Contract.txt`;
-                link.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+              onClick={downloadAsTXT}
+              className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
             >
-              Download Contract
+              Download TXT
             </button>
           </div>
         </div>
