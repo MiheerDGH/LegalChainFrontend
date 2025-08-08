@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
   }, [fetchDocuments]);
 
   const handleUploadComplete = async () => {
-    setHasUploaded(true); // 🆕 flip to true
+    setHasUploaded(true); // 
     await fetchDocuments();
   };
 
