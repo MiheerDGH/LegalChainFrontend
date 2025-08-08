@@ -37,8 +37,19 @@ export default function ContractCreationPage() {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      const session = refreshData?.session;
+
+      if (refreshError || !session) {
+        console.error("❌ Session refresh failed:", refreshError);
+        alert('Please re-login.');
+        setLoading(false);
+        return;
+      }
+
+      const token = session.access_token;
+      console.log("🪪 Refreshed Supabase token sent:", token);
+
       if (!token) {
         alert('You must be signed in to generate a contract.');
         setLoading(false);
@@ -51,7 +62,6 @@ export default function ContractCreationPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        credentials: 'include',
         body: JSON.stringify({
           contractType,
           partyA,
@@ -62,8 +72,15 @@ export default function ContractCreationPage() {
         }),
       });
 
-      const data = await res.json();
-      setContract(data.result || data.contract || 'No contract generated.');
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`❌ API error ${res.status}:`, errorText);
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+
+      const responseData = await res.json();
+      console.log("🧾 Contract response:", responseData);
+      setContract(responseData.contract || 'No contract generated.');
     } catch (err) {
       console.error(err);
       alert('Unexpected error occurred.');
