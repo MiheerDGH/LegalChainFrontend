@@ -32,6 +32,20 @@ export default function ContractCreationPage() {
     checkSession();
   }, [router]);
 
+  const makeClauseKeywords = (list: string[]) =>
+    Array.from(
+      new Set(
+        (list || [])
+          .map(c => (c || '').toLowerCase())
+          .flatMap(c =>
+            c
+              .replace(/[^a-z0-9\s]/gi, ' ')
+              .split(/\s+/)
+              .filter(w => w.length > 3)
+          )
+      )
+    ).slice(0, 10);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -69,6 +83,7 @@ export default function ContractCreationPage() {
           effectiveDate,
           clauses,
           jurisdiction,
+          clauseKeywords: makeClauseKeywords(clauses),
         }),
       });
 
@@ -178,7 +193,7 @@ export default function ContractCreationPage() {
             >
               <option value="">Select a state or country</option>
               {jurisdictions.map((j) => (
-                <option key={j.id} value={j.label}>
+                <option key={j.id} value={j.id}>
                   {j.label}
                 </option>
               ))}
