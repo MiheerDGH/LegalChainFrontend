@@ -56,6 +56,10 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDocuments();
+    (async () => {
+    const { data } = await supabase.auth.getSession();
+    console.log('Access token:', data?.session?.access_token);
+  })();
   }, [fetchDocuments]);
 
   const handleUploadComplete = async () => {
