@@ -56,6 +56,16 @@ export default function NdaGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 py-10 px-4 flex flex-col items-center">
+      {/* 🔙 Back Button */}
+      <div className="w-full max-w-2xl mb-4">
+        <button
+          onClick={() => (window.location.href = 'http://localhost:3000/')}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          &larr; Back to Home
+        </button>
+      </div>
+
       {/* Form */}
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-6 text-center">NDA Generator</h1>

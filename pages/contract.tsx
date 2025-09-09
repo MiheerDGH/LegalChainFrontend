@@ -129,6 +129,21 @@ export default function ContractCreationPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 py-10 px-4 flex flex-col items-center">
+      {/* Back Button */}
+      <div className="w-full max-w-2xl mb-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          aria-label="Go back"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+      </div>
+
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-6 text-center">Contract Generator</h1>
 
@@ -243,7 +258,22 @@ export default function ContractCreationPage() {
       {/* ✅ Inline Preview Section */}
       {contract && (
         <div className="bg-white mt-10 p-6 rounded-xl shadow-md w-full max-w-3xl">
-          <h2 className="text-xl font-bold mb-4">Generated Contract</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Generated Contract</h2>
+            {/* Secondary Back Button near preview */}
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
+              aria-label="Go back"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          </div>
+
           <div
             id="contract-preview"
             className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed border p-4 rounded bg-gray-50"

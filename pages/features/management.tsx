@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 
 type Document = {
   id: string;
@@ -13,15 +14,14 @@ export default function DocumentManagementPage() {
   const [loading, setLoading] = useState(true);
   const [fileA, setFileA] = useState<File | null>(null);
   const [fileB, setFileB] = useState<File | null>(null);
+  const router = useRouter();
 
   const fetchDocuments = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/docs', {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
+        headers: { 'Cache-Control': 'no-cache' },
       });
 
       if (process.env.NODE_ENV === 'development') {
@@ -60,13 +60,6 @@ export default function DocumentManagementPage() {
   const handleUpload = async (file: File, category: 'A' | 'B') => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`📤 Uploading file to category ${category}:`, file);
-      console.log('📦 File details:', {
-        name: file.name,
-        size: file.size,
-        lastModified: file.lastModified,
-        lastModifiedDate: file.lastModifiedDate,
-        webkitRelativePath: file.webkitRelativePath,
-      });
     }
 
     const formData = new FormData();
@@ -129,6 +122,20 @@ export default function DocumentManagementPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 flex items-center justify-center">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-3xl">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+        </div>
+
         <h1 className="text-2xl font-bold mb-6 text-center">Document Management</h1>
 
         {/* Upload Section */}
@@ -142,13 +149,7 @@ export default function DocumentManagementPage() {
               className="w-full border rounded p-2 mb-2"
             />
             <button
-              onClick={() => {
-                if (!fileA) {
-                  console.warn('⚠️ No file selected for Category A');
-                  return;
-                }
-                handleUpload(fileA, 'A');
-              }}
+              onClick={() => fileA && handleUpload(fileA, 'A')}
               disabled={!fileA}
               className={`w-full py-2 px-4 rounded text-white ${
                 fileA ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
@@ -167,13 +168,7 @@ export default function DocumentManagementPage() {
               className="w-full border rounded p-2 mb-2"
             />
             <button
-              onClick={() => {
-                if (!fileB) {
-                  console.warn('⚠️ No file selected for Category B');
-                  return;
-                }
-                handleUpload(fileB, 'B');
-              }}
+              onClick={() => fileB && handleUpload(fileB, 'B')}
               disabled={!fileB}
               className={`w-full py-2 px-4 rounded text-white ${
                 fileB ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'

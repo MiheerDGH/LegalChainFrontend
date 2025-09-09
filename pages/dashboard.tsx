@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [hasUploaded, setHasUploaded] = useState(false); // 🆕 track upload trigger
+  const [hasUploaded, setHasUploaded] = useState(false);
   const router = useRouter();
 
   const fetchDocuments = useCallback(async () => {
@@ -57,13 +57,13 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchDocuments();
     (async () => {
-    const { data } = await supabase.auth.getSession();
-    console.log('Access token:', data?.session?.access_token);
-  })();
+      const { data } = await supabase.auth.getSession();
+      console.log('Access token:', data?.session?.access_token);
+    })();
   }, [fetchDocuments]);
 
   const handleUploadComplete = async () => {
-    setHasUploaded(true); // 
+    setHasUploaded(true);
     await fetchDocuments();
   };
 
@@ -128,6 +128,20 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white text-gray-800 px-6 py-10">
+      {/* Back Button */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+      </div>
+
       <h1 className="text-3xl font-bold mb-8">Your Legal Documents</h1>
 
       {/* Upload Component */}
@@ -135,7 +149,7 @@ const Dashboard: React.FC = () => {
         <DocumentUploader onUploadComplete={handleUploadComplete} />
       </div>
 
-      {/* Documents Grid & Analysis - conditional render */}
+      {/* Documents Grid & Analysis */}
       {hasUploaded && (
         <>
           {loading ? (
@@ -171,7 +185,6 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* AI Analysis Output */}
           {analysis && selectedDocId && (
             <div className="mt-12">
               <h2 className="text-2xl font-bold mb-4">Analysis Result</h2>

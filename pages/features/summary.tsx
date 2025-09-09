@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 
 export default function DocumentSummaryPage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
+  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0] || null;
@@ -31,6 +33,20 @@ export default function DocumentSummaryPage() {
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 p-6 flex items-center justify-center">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Home
+          </button>
+        </div>
+
         <h1 className="text-2xl font-bold mb-4 text-center">Document Summary</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">

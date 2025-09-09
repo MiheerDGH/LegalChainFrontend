@@ -10,35 +10,7 @@ const Footer = () => {
   return (
     <footer className="bg-white text-slate-800 py-12 px-6 mt-20 shadow-inner relative z-10">
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10">
-        {/* Brand */}
-        <div>
-          <h2 className="text-3xl font-extrabold text-indigo-600 tracking-wide">
-            LEGAL CHAIN
-          </h2>
-          <p className="text-sm text-slate-600 leading-relaxed mt-2">
-            <span className="italic">AI-powered legal docs.</span> <br />
-            <span className="text-sky-600 font-medium">Fast. Accurate. Accessible.</span><br />
-            Smarter contracts for a smarter future.
-          </p>
-        </div>
-
-        {/* Quick Links */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3 text-sky-600">Quick Links</h3>
-          <ul className="space-y-1 text-sm text-slate-700">
-            {['Home', 'Services', 'About', 'FAQ', 'Investors', 'Careers', 'Contact'].map((item) => (
-              <li key={item}>
-                <a
-                  href="#"
-                  className="inline-block transition hover:text-indigo-600 hover:underline underline-offset-2"
-                >
-                  {item}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
+      
         {/* Contact + Social Icons */}
         <div>
           <h3 className="text-lg font-semibold mb-3 text-sky-600">Contact</h3>
