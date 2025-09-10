@@ -8,6 +8,7 @@ export default function NdaGeneratorPage() {
   const [confidentialInfo, setConfidentialInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [reviewResults, setReviewResults] = useState<any | null>(null); // New state variable
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,12 +23,40 @@ export default function NdaGeneratorPage() {
 
       const data = await res.json();
       setPreviewContent(data.nda || data.text || 'No content returned.');
+      setReviewResults(null); // Clear previous review results
     } catch (err) {
       console.error('Error generating NDA:', err);
       setPreviewContent('An error occurred. Please try again.');
     }
 
     setLoading(false);
+  };
+
+  const handleReview = async () => {
+    if (!previewContent) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/ai/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ndaContent: previewContent }),
+      });
+
+      if (!res.ok) {
+        console.error('Failed to review NDA:', res.status, await res.text());
+        setReviewResults({ issues: ['Review failed. Please try again.'], suggestions: [], authorities: [] });
+        return;
+      }
+
+      const data = await res.json();
+      setReviewResults(data);
+    } catch (err) {
+      console.error('Error reviewing NDA:', err);
+      setReviewResults({ issues: ['An error occurred during review.'], suggestions: [], authorities: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const downloadAsPDF = () => {
@@ -119,19 +148,21 @@ export default function NdaGeneratorPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full bg-yellow-500 text-white py-3 rounded font-bold ${
-              loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-600'
-            }`}
-          >
-            {loading ? 'Generating NDA...' : 'Generate NDA'}
-          </button>
+          <div className="flex justify-between">
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full bg-yellow-500 text-white py-3 rounded font-bold ${
+                loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-600'
+              }`}
+            >
+              {loading ? 'Generating NDA...' : 'Generate NDA'}
+            </button>
+          </div>
         </form>
       </div>
 
-      {/* ✅ Inline Preview Section */}
+      {/* Inline Preview Section */}
       {previewContent && (
         <div className="bg-white mt-10 p-6 rounded-xl shadow-md w-full max-w-3xl">
           <h2 className="text-xl font-bold mb-4">Generated NDA</h2>
@@ -155,6 +186,61 @@ export default function NdaGeneratorPage() {
             >
               Download TXT
             </button>
+          </div>
+
+          {/* Review Section */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-2">Review NDA</h3>
+            <button
+              onClick={handleReview}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            >
+              {loading ? 'Reviewing...' : 'Review NDA'}
+            </button>
+
+            {reviewResults && (
+              <div className="mt-4 p-4 border rounded bg-gray-50">
+                <h4 className="font-semibold">Review Results</h4>
+                {reviewResults.issues && reviewResults.issues.length > 0 && (
+                  <div className="mt-2">
+                    <span className="font-medium">Issues:</span>
+                    <ul className="list-disc list-inside ml-4">
+                      {reviewResults.issues.map((issue: string, idx: number) => (
+                        <li key={idx} className="text-red-600">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {reviewResults.suggestions && reviewResults.suggestions.length > 0 && (
+                  <div className="mt-2">
+                    <span className="font-medium">Suggestions:</span>
+                    <ul className="list-disc list-inside ml-4">
+                      {reviewResults.suggestions.map((suggestion: string, idx: number) => (
+                        <li key={idx} className="text-green-600">
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {reviewResults.authorities && reviewResults.authorities.length > 0 && (
+                  <div className="mt-2">
+                    <span className="font-medium">Authorities:</span>
+                    <ul className="list-disc list-inside ml-4">
+                      {reviewResults.authorities.map((authority: string, idx: number) => (
+                        <li key={idx} className="text-blue-600">
+                          {authority}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

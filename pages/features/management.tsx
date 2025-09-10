@@ -59,7 +59,17 @@ export default function DocumentManagementPage() {
 
   const handleUpload = async (file: File, category: 'A' | 'B') => {
     if (process.env.NODE_ENV === 'development') {
+<<<<<<< Updated upstream
       console.log(`📤 Uploading file to category ${category}:`, file);
+=======
+      console.log(` Uploading file to category ${category}:`, file);
+      console.log(' File details:', {
+        name: file.name,
+        size: file.size,
+        lastModified: file.lastModified,
+        webkitRelativePath: file.webkitRelativePath,
+      });
+>>>>>>> Stashed changes
     }
 
     const formData = new FormData();
@@ -74,19 +84,19 @@ export default function DocumentManagementPage() {
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error(`❌ Upload failed: ${res.status}`, errorText);
+        console.error(` Upload failed: ${res.status}`, errorText);
         return;
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Upload successful');
+        console.log(' Upload successful');
       }
 
       setFileA(null);
       setFileB(null);
       fetchDocuments();
     } catch (err) {
-      console.error('🔥 Upload error:', err);
+      console.error(' Upload error:', err);
     }
   };
 
@@ -99,10 +109,10 @@ export default function DocumentManagementPage() {
         setDocuments((prev) => prev.filter((doc) => doc.id !== id));
       } else {
         const errorText = await res.text();
-        console.error(`❌ Delete failed: ${res.status}`, errorText);
+        console.error(`Delete failed: ${res.status}`, errorText);
       }
     } catch (err) {
-      console.error('🔥 Delete error:', err);
+      console.error('Delete error:', err);
     }
   };
 
@@ -112,7 +122,7 @@ export default function DocumentManagementPage() {
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('📦 Current documents state:', documents);
+      console.log(' Current documents state:', documents);
     }
   }, [documents]);
 
@@ -149,7 +159,17 @@ export default function DocumentManagementPage() {
               className="w-full border rounded p-2 mb-2"
             />
             <button
+<<<<<<< Updated upstream
               onClick={() => fileA && handleUpload(fileA, 'A')}
+=======
+              onClick={() => {
+                if (!fileA) {
+                  console.warn('No file selected for Category A');
+                  return;
+                }
+                handleUpload(fileA, 'A');
+              }}
+>>>>>>> Stashed changes
               disabled={!fileA}
               className={`w-full py-2 px-4 rounded text-white ${
                 fileA ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
@@ -168,7 +188,17 @@ export default function DocumentManagementPage() {
               className="w-full border rounded p-2 mb-2"
             />
             <button
+<<<<<<< Updated upstream
               onClick={() => fileB && handleUpload(fileB, 'B')}
+=======
+              onClick={() => {
+                if (!fileB) {
+                  console.warn(' No file selected for Category B');
+                  return;
+                }
+                handleUpload(fileB, 'B');
+              }}
+>>>>>>> Stashed changes
               disabled={!fileB}
               className={`w-full py-2 px-4 rounded text-white ${
                 fileB ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
