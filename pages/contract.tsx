@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
 
@@ -22,7 +22,10 @@ export default function ContractCreationPage() {
   const [jurisdiction, setJurisdiction] = useState('');
   const [loading, setLoading] = useState(false);
   const [contract, setContract] = useState('');
+  const [references, setReferences] = useState([]);
+  const [structure, setStructure] = useState([]);
   const [contractType, setContractType] = useState('Standard Contract');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -49,6 +52,7 @@ export default function ContractCreationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null); // Clear any previous errors
 
     try {
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
@@ -90,15 +94,22 @@ export default function ContractCreationPage() {
       if (!res.ok) {
         const errorText = await res.text();
         console.error(`❌ API error ${res.status}:`, errorText);
-        throw new Error(`Request failed with status ${res.status}`);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(`Request failed with status ${res.status}: ${errorJson.message || errorText}`);
+        } catch (jsonError) {
+          throw new Error(`Request failed with status ${res.status}: ${errorText}`);
+        }
       }
 
-      const responseData = await res.json();
-      console.log("🧾 Contract response:", responseData);
-      setContract(responseData.contract || 'No contract generated.');
+  const responseData = await res.json();
+  console.log("🧾 Contract response:", responseData);
+  setContract(responseData.contract || 'No contract generated.');
+  setReferences(responseData.references || []);
+  setStructure(responseData.structure || []);
     } catch (err) {
-      console.error(err);
-      alert('Unexpected error occurred.');
+      console.error('Error generating contract:', err);
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -252,6 +263,12 @@ export default function ContractCreationPage() {
           >
             {loading ? 'Generating...' : 'Generate Contract'}
           </button>
+
+          {error && (
+            <div className="mt-4 text-red-500 text-sm">
+              Error: {error}
+            </div>
+          )}
         </form>
       </div>
 
@@ -260,7 +277,6 @@ export default function ContractCreationPage() {
         <div className="bg-white mt-10 p-6 rounded-xl shadow-md w-full max-w-3xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Generated Contract</h2>
-            {/* Secondary Back Button near preview */}
             <button
               type="button"
               onClick={() => router.back()}
@@ -274,11 +290,14 @@ export default function ContractCreationPage() {
             </button>
           </div>
 
-          <div
-            id="contract-preview"
-            className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed border p-4 rounded bg-gray-50"
-          >
-            {contract}
+          {/* Use ContractRenderer for preview */}
+          <div id="contract-preview">
+            {/* @ts-ignore */}
+            {React.createElement(require('../components/ContractRenderer').default, {
+              contract,
+              references,
+              structure,
+            })}
           </div>
 
           <div className="mt-4 flex justify-end gap-4">

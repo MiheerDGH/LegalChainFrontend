@@ -18,7 +18,12 @@ export default function DocumentPreviewModal({
 }: Props) {
   const downloadPDF = () => {
     const el = document.getElementById(contentDomId);
-    if (!el) return;
+    if (!el) {
+      console.error('Element with ID not found:', contentDomId);
+      alert('Error: Document element not found.');
+      return;
+    }
+
     const opt = {
       margin: 0.5,
       filename: 'document.pdf',
@@ -26,16 +31,35 @@ export default function DocumentPreviewModal({
       html2canvas: {},
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
     };
-    html2pdf().from(el).set(opt).save();
+
+    html2pdf()
+      .from(el)
+      .set(opt)
+      .save()
+      .catch((error) => {
+        console.error('Error downloading PDF:', error);
+        alert('Error: Failed to download PDF.');
+      });
   };
 
   const downloadTXT = () => {
-    if (!textContent) return;
-    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'document.txt';
-    a.click();
+    if (!textContent) {
+      console.warn('No text content to download.');
+      alert('Error: No text content available.');
+      return;
+    }
+
+    try {
+      const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'document.txt';
+      a.click();
+      URL.revokeObjectURL(a.href); // Clean up the URL object
+    } catch (error) {
+      console.error('Error downloading TXT:', error);
+      alert('Error: Failed to download TXT.');
+    }
   };
 
   return (

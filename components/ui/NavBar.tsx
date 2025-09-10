@@ -16,6 +16,7 @@ export default function Navbar() {
       <Link href="/">Legal Chain</Link>
       <div className="space-x-4">
         <Link href="/dashboard">Dashboard</Link>
+        <Link href="/past-contracts">Past Contracts</Link>
         <button onClick={handleLogout} className="hover:underline">
           Logout
         </button>
