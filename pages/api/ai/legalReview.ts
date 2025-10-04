@@ -1,87 +1,78 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import formidable from "formidable";
-import fs from "fs";
-import nlp from "compromise";
+// pages/api/ai/legalReview.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import formidable, { File as FormidableFile } from 'formidable';
+import fs from 'node:fs/promises';
 
-export const config = {
-  api: {
-    bodyParser: false, // Required for formidable to handle file uploads
-  },
+export const config = { api: { bodyParser: false } };
+
+type Review = {
+    complianceScore: number;
+    issues: string[];
+    suggestions: string[];
+    summary: string;
 };
 
-const analyzeLegalDocument = (text: string) => {
-  const doc = nlp(text);
-  const issues: string[] = [];
-  const suggestions: string[] = [];
-
-  const hasGoverningLaw = /governing law|jurisdiction/i.test(text);
-  const hasIndemnification = /indemnif(y|ication)/i.test(text);
-  const hasLiabilityLimit = /limitation of liability|liability cap/i.test(text);
-  const hasRenewal = /automatic renewal|renewal term/i.test(text);
-  const hasTermination = /termination|cancel|exit clause/i.test(text);
-  const hasForceMajeure = /force majeure/i.test(text);
-
-  const verbs = doc.verbs().out("array");
-  const legalVerbs = verbs.filter(v =>
-    ["indemnify", "terminate", "govern", "renew", "compensate"].includes(v.toLowerCase())
-  );
-
-  if (!hasGoverningLaw) {
-    issues.push("Missing governing law clause");
-    suggestions.push("Add a clause specifying jurisdiction and applicable law.");
-  }
-
-  if (hasIndemnification && !hasLiabilityLimit) {
-    issues.push("Indemnification clause without liability cap");
-    suggestions.push("Add a limitation of liability to balance risk exposure.");
-  }
-
-  if (hasRenewal) {
-    suggestions.push("Clarify renewal terms and opt-out procedures.");
-  }
-
-  if (!hasTermination) {
-    issues.push("No termination clause found");
-    suggestions.push("Include terms for early termination or breach.");
-  }
-
-  if (!hasForceMajeure) {
-    suggestions.push("Consider adding a force majeure clause to cover unforeseeable events.");
-  }
-
-  const complianceScore = Math.min(100, 60 + (5 * legalVerbs.length) - (10 * issues.length));
-
-  return {
-    complianceScore,
-    issues,
-    suggestions,
-    summary: `Document reviewed for legal compliance and enforceability. Found ${issues.length} issue(s).`,
-  };
-};
+function first<T>(v: T | T[] | undefined): T | undefined {
+    if (Array.isArray(v)) return v[0];
+    return v;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const form = formidable({ multiples: false });
-
-  form.parse(req, async (err, fields, files) => {
-    if (err || !files.document) {
-      console.error("Upload error:", err);
-      return res.status(400).json({ error: "Failed to parse uploaded document" });
+    if (req.method !== 'POST') {
+        res.status(405).send('Method Not Allowed');
+        return;
     }
-
-    const file = files.document as formidable.File;
-    const buffer = fs.readFileSync(file.filepath);
-    const text = buffer.toString("utf-8");
 
     try {
-      const review = analyzeLegalDocument(text);
-      res.status(200).json({ message: "Legal review complete", review });
-    } catch (error) {
-      console.error("Review error:", error);
-      res.status(500).json({ error: "Failed to review document" });
+        const { fields, files } = await new Promise<{ fields: formidable.Fields; files: formidable.Files }>((resolve, reject) => {
+            const form = formidable({ multiples: false, keepExtensions: true });
+            form.parse(req, (err, fields, files) => (err ? reject(err) : resolve({ fields, files })));
+        });
+
+        // Normalize role (could be string | string[] | undefined)
+        const rawRole = first(fields.role as unknown as string | string[] | undefined);
+        const role = typeof rawRole === 'string' ? rawRole.toLowerCase() : '';
+
+        if (role !== 'sender' && role !== 'recipient') {
+            res.status(400).send('Missing or invalid role. Expected "sender" or "recipient".');
+            return;
+        }
+
+        // Normalize file (could be File | File[] | undefined)
+        const rawFile = first(files.document as unknown as FormidableFile | FormidableFile[] | undefined);
+        if (!rawFile) {
+            res.status(400).send('Missing file. Use field name "document".');
+            return;
+        }
+
+        const name = (rawFile.originalFilename || '').toLowerCase();
+        if (!name.endsWith('.txt')) {
+            res.status(400).send('Only .txt files are supported in v1.');
+            return;
+        }
+
+        const text = await fs.readFile(rawFile.filepath, 'utf8');
+
+        // --- TEMP REVIEW OBJECT (stubbed) ---
+        const review: Review = {
+            complianceScore: 42,
+            issues: [
+                'Uncapped punitive/consequential damages detected',
+                'Termination without notice detected',
+                'Overbroad confidentiality carve-out detected',
+                'Invalid governing law detected',
+            ],
+            suggestions: [
+                'Add a clear liability cap (e.g., fees paid in last 12 months).',
+                'Require a minimum notice period (e.g., 30 days).',
+                'Remove discretionary disclosure carve-out or restrict to legal/regulatory.',
+                'Use a valid governing law for your jurisdiction.',
+            ],
+            summary: `Reviewed ${name} for role: ${role}.`,
+        };
+
+        res.status(200).json({ review, role });
+    } catch (e: any) {
+        res.status(500).send(e?.message ?? 'Unexpected error');
     }
-  });
 }
