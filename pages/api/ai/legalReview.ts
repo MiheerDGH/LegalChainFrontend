@@ -1,78 +1,78 @@
-// pages/api/ai/legalReview.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import formidable, { File as FormidableFile } from 'formidable';
-import fs from 'node:fs/promises';
+// frontend/lib/legalReview.ts
+// Calls the BACKEND /api/review endpoint with Supabase JWT and FormData.
 
-export const config = { api: { bodyParser: false } };
+import { createClient } from '@supabase/supabase-js';
 
-type Review = {
-    complianceScore: number;
-    issues: string[];
-    suggestions: string[];
-    summary: string;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!; // e.g., http://localhost:5000
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export type ReviewFinding = {
+    id: string;
+    clauseId?: string;
+    clauseTitle?: string;
+    clauseText: string;
+    issueCode: string;
+    issueText: string;
+    severity: 'low' | 'med' | 'high';
+    references?: { citation: string; caseName?: string; court?: string; date?: string; url?: string }[];
 };
 
-function first<T>(v: T | T[] | undefined): T | undefined {
-    if (Array.isArray(v)) return v[0];
-    return v;
-}
+export type ReviewResponse = {
+    documentId?: string;
+    findings?: ReviewFinding[];
+    summary?: string;
+    role?: 'sender' | 'recipient';
+    complianceScore?: number;
+    // older temp shape support (if backend still returns it)
+    review?: {
+        complianceScore: number;
+        issues: string[];
+        suggestions: string[];
+        summary: string;
+    };
+};
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') {
-        res.status(405).send('Method Not Allowed');
-        return;
+export async function postLegalReviewToBackend(opts: {
+    file: File;
+    role: 'sender' | 'recipient';
+    documentId?: string; // optional if you already created a Document row
+}): Promise<ReviewResponse> {
+    const { file, role, documentId } = opts;
+
+    // v1 requires .txt (keep the guard client-side too)
+    if (!file.name.toLowerCase().endsWith('.txt')) {
+        throw new Error('Only .txt files are supported in v1.');
     }
 
-    try {
-        const { fields, files } = await new Promise<{ fields: formidable.Fields; files: formidable.Files }>((resolve, reject) => {
-            const form = formidable({ multiples: false, keepExtensions: true });
-            form.parse(req, (err, fields, files) => (err ? reject(err) : resolve({ fields, files })));
-        });
+    // Supabase session → access token
+    const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
+    if (sessErr) throw new Error(`Auth error: ${sessErr.message}`);
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) throw new Error('You must be logged in to run Legal Review.');
 
-        // Normalize role (could be string | string[] | undefined)
-        const rawRole = first(fields.role as unknown as string | string[] | undefined);
-        const role = typeof rawRole === 'string' ? rawRole.toLowerCase() : '';
+    const form = new FormData();
+    form.append('document', file);      // FIELD NAME MUST BE 'document'
+    form.append('role', role);          // 'sender' | 'recipient'
+    if (documentId) form.append('documentId', documentId);
 
-        if (role !== 'sender' && role !== 'recipient') {
-            res.status(400).send('Missing or invalid role. Expected "sender" or "recipient".');
-            return;
-        }
+    const res = await fetch(`${API_BASE}/api/review`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${accessToken}`, // backend will verify
+            // DO NOT set Content-Type; the browser sets multipart boundary for FormData
+        },
+        body: form,
+    });
 
-        // Normalize file (could be File | File[] | undefined)
-        const rawFile = first(files.document as unknown as FormidableFile | FormidableFile[] | undefined);
-        if (!rawFile) {
-            res.status(400).send('Missing file. Use field name "document".');
-            return;
-        }
-
-        const name = (rawFile.originalFilename || '').toLowerCase();
-        if (!name.endsWith('.txt')) {
-            res.status(400).send('Only .txt files are supported in v1.');
-            return;
-        }
-
-        const text = await fs.readFile(rawFile.filepath, 'utf8');
-
-        // --- TEMP REVIEW OBJECT (stubbed) ---
-        const review: Review = {
-            complianceScore: 42,
-            issues: [
-                'Uncapped punitive/consequential damages detected',
-                'Termination without notice detected',
-                'Overbroad confidentiality carve-out detected',
-                'Invalid governing law detected',
-            ],
-            suggestions: [
-                'Add a clear liability cap (e.g., fees paid in last 12 months).',
-                'Require a minimum notice period (e.g., 30 days).',
-                'Remove discretionary disclosure carve-out or restrict to legal/regulatory.',
-                'Use a valid governing law for your jurisdiction.',
-            ],
-            summary: `Reviewed ${name} for role: ${role}.`,
-        };
-
-        res.status(200).json({ review, role });
-    } catch (e: any) {
-        res.status(500).send(e?.message ?? 'Unexpected error');
+    // Helpful error surfacing for the UI
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        const msg = text || `HTTP ${res.status}`;
+        throw new Error(msg);
     }
+
+    return (await res.json()) as ReviewResponse;
 }

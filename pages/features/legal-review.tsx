@@ -1,6 +1,7 @@
 // frontend/pages/features/legal-review.tsx (or your path)
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { postLegalReviewToBackend, ReviewResponse } from '../api/ai/legalReview';
 
 export default function LegalReviewPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -25,6 +26,7 @@ export default function LegalReviewPage() {
         e.preventDefault();
         setError(null);
         setMessage(null);
+
         if (!file || !role) {
             setError('Please choose a role and a .txt document.');
             return;
@@ -32,26 +34,24 @@ export default function LegalReviewPage() {
 
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('document', file);       // << required name
-            formData.append('role', role);           // << required field
+            const data: ReviewResponse = await postLegalReviewToBackend({ file, role });
 
-            const res = await fetch('/api/ai/legalReview', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!res.ok) {
-                const txt = await res.text().catch(()=>'');
-                setError(`Failed to run legal review. Please try again. ${txt ? `Details: ${txt}` : ''}`);
-                return;
+            // Support both the new engine shape (findings[]) and the older temp shape (review)
+            if (data.findings && data.findings.length) {
+                setReviewResult(JSON.stringify({
+                    summary: data.summary,
+                    complianceScore: data.complianceScore,
+                    findings: data.findings,
+                }, null, 2));
+            } else if (data.review) {
+                setReviewResult(JSON.stringify(data.review, null, 2));
+            } else {
+                setReviewResult(JSON.stringify(data, null, 2));
             }
-            const data = await res.json();
-            // The temp API should return { review, role }
-            setReviewResult(JSON.stringify(data.review ?? data, null, 2));
+
             setMessage('Legal review complete!');
-        } catch {
-            setError('Error running legal review. Please try again.');
+        } catch (err: any) {
+            setError(`Failed to run legal review. Details: ${err?.message ?? 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
