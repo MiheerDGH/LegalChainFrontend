@@ -3,11 +3,7 @@ import formidable from "formidable";
 import fs from "fs";
 import nlp from "compromise";
 
-export const config = {
-  api: {
-    bodyParser: false, // Required for formidable to handle file uploads
-  },
-};
+
 
 const analyzeLegalDocument = (text: string) => {
   const doc = nlp(text);
@@ -83,5 +79,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error("Review error:", error);
       res.status(500).json({ error: "Failed to review document" });
     }
+
   });
 }
+
+export const config = {
+  api: {
+    bodyParser: false, // Required for formidable to handle file uploads
+  },
+};
