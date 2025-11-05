@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import DOMPurify from 'dompurify';
 
 type Reference = { citation?: string; caseName?: string; court?: string; date?: string; url?: string };
 type Section = { heading: string; id: string };
+
+function sanitizeHtml(input: string) {
+  if (!input) return '';
+  // Use DOMPurify for robust sanitization; allow target attribute for links
+  try {
+    return DOMPurify.sanitize(input, { ADD_ATTR: ['target'] });
+  } catch (e) {
+    // Fallback to naive sanitizer if DOMPurify fails
+    let out = input.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+    out = out.replace(/ on[a-zA-Z]+=\"[\s\S]*?\"/gi, '');
+    out = out.replace(/ on[a-zA-Z]+=\'[\s\S]*?\'/gi, '');
+    out = out.replace(/href=\"javascript:[^\"]*\"/gi, '');
+    out = out.replace(/src=\"javascript:[^\"]*\"/gi, '');
+    return out;
+  }
+}
 
 export default function ContractRenderer({
   contract,
@@ -12,6 +29,27 @@ export default function ContractRenderer({
   structure?: Section[];
   references?: Reference[];
 }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToSection = (id?: string, heading?: string) => {
+    // Try by id first
+    if (id) {
+      const elById = document.getElementById(id);
+      if (elById) return elById.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // Fallback: search for heading text inside the rendered container
+    if (heading && containerRef.current) {
+      const children = Array.from(containerRef.current.querySelectorAll('*')) as HTMLElement[];
+      for (const el of children) {
+        if (el.innerText && el.innerText.trim().toLowerCase().includes(heading.trim().toLowerCase())) {
+          return el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+  };
+
+  const looksLikeHtml = (s: string) => /<[^>]+>/.test(s || '');
+
   return (
     <div className="text-black">
       {structure.length > 0 && (
@@ -20,18 +58,25 @@ export default function ContractRenderer({
           <ul className="list-disc list-inside space-y-1">
             {structure.map((s) => (
               <li key={s.id}>
-                <a href={`#${s.id}`} className="text-blue-600 hover:underline">
+                <button
+                  onClick={() => scrollToSection(s.id, s.heading)}
+                  className="text-blue-600 hover:underline text-left"
+                >
                   {s.heading}
-                </a>
+                </button>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* For now: render plain text. If backend includes IDs per section, you can split and add anchors */}
-      <div className="prose max-w-none">
-        <pre className="whitespace-pre-wrap">{contract}</pre>
+      <div ref={containerRef} className="prose max-w-none">
+        {looksLikeHtml(contract) ? (
+          // Minimal sanitization; backend should provide safe HTML when possible
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(contract) }} />
+        ) : (
+          <pre className="whitespace-pre-wrap">{contract}</pre>
+        )}
       </div>
 
       {references.length > 0 && (

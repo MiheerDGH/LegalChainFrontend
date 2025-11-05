@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import apiClient from '../../lib/apiClient';
 
 const languages = [
   { code: 'es', name: 'Spanish' },
@@ -35,19 +36,14 @@ export default function TranslationPage() {
       formData.append('file', file);
       formData.append('language', language);
 
-      const res = await fetch('/api/ai/translate', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/translate', formData);
+        const data = result.data;
+        setTranslatedText(data?.translation || 'No translation returned.');
+        setMessage('Translation complete!');
+      } catch (err) {
         setError('Failed to translate document. Please try again.');
-        setLoading(false);
-        return;
       }
-      const data = await res.json();
-      setTranslatedText(data.translation || 'No translation returned.');
-      setMessage('Translation complete!');
     } catch (err) {
       setError('Error translating document. Please try again.');
     } finally {

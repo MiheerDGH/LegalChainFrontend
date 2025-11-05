@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import ReviewResults from '../../components/ReviewResults';
+import apiClient from '../../lib/apiClient';
 
 export default function LegalReviewPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -24,19 +26,14 @@ export default function LegalReviewPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/ai/legalReview', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/legalReview', formData);
+        const data = result.data;
+        setReviewResult(data?.analysis || 'No analysis returned.');
+        setMessage('Legal review complete!');
+      } catch (err) {
         setError('Failed to run legal review. Please try again.');
-        setLoading(false);
-        return;
       }
-      const data = await res.json();
-      setReviewResult(data.analysis || 'No analysis returned.');
-      setMessage('Legal review complete!');
     } catch (err) {
       setError('Error running legal review. Please try again.');
     } finally {
@@ -99,10 +96,7 @@ export default function LegalReviewPage() {
         </form>
 
         {reviewResult && (
-          <div className="mt-6 border-t pt-4">
-            <h2 className="text-lg font-semibold mb-2">Analysis Result:</h2>
-            <pre className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap">{reviewResult}</pre>
-          </div>
+          <ReviewResults results={reviewResult} className="mt-6 border-t pt-4" />
         )}
       </div>
     </div>

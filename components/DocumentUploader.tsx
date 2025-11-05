@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import supabase from '../lib/supabaseClient';
+import apiClient from '../lib/apiClient';
 
 interface Props {
   onUploadComplete: () => void;
@@ -19,11 +20,10 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
 
   const handleUpload = async () => {
     if (!file) return;
+    setUploading(true);
+    setStatus('Uploading...');
 
     try {
-      setUploading(true);
-      setStatus('Uploading...');
-
       const session = await supabase.auth.getSession();
       const token = session.data?.session?.access_token;
 
@@ -33,30 +33,55 @@ const DocumentUploader: React.FC<Props> = ({ onUploadComplete }) => {
         return;
       }
 
+      // Use XMLHttpRequest to provide upload progress feedback
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/docs/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const url = `${base.replace(/\/$/, '')}/api/docs/upload`;
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setStatus(`Uploading... ${pct}%`);
+          }
+        };
+
+        xhr.onload = () => {
+          const text = xhr.responseText || '';
+          // Try to parse JSON response
+          let data: any = null;
+          try {
+            data = text ? JSON.parse(text) : null;
+          } catch (parseErr) {
+            // non-json response
+            console.error('Upload returned non-json response:', text);
+          }
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setStatus('Upload successful!');
+            setFile(null);
+            onUploadComplete();
+            resolve();
+          } else {
+            const msg = data?.message || data?.error || text || `HTTP ${xhr.status}`;
+            reject(new Error(String(msg)));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error('Upload failed due to a network error.'));
+        };
+
+        xhr.send(formData);
       });
-
-      const text = await res.text();
-      const isHTML = text.startsWith('<!DOCTYPE');
-
-      if (!res.ok) {
-        throw new Error(isHTML ? 'Server returned HTML instead of JSON.' : text);
-      }
-
-      setStatus('Upload successful!');
-      setFile(null);
-      onUploadComplete(); 
     } catch (err: unknown) {
-      const errorMessage = 
-        err instanceof Error ? err.message : 'Upload failed.';
+      const errorMessage = err instanceof Error ? err.message : 'Upload failed.';
       console.error('Upload failed:', err);
       setStatus(errorMessage);
     } finally {

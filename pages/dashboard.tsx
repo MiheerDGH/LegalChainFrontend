@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import DocumentUploader from '../components/DocumentUploader';
 import AnalysisResult from '../components/AnalysisResult';
 import supabase from '../lib/supabaseClient';
+import apiClient from '../lib/apiClient';
 
 interface Document {
   id: string;
@@ -43,20 +44,13 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/docs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        setError(`Failed to fetch documents: ${res.status} ${errorText}`);
+      try {
+        const result = await apiClient.get('/api/docs', { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+        setDocuments(result.data || []);
+      } catch (err: any) {
+        setError(`Failed to fetch documents: ${err?.message || String(err)}`);
         return;
       }
-      const data = await res.json();
-      setDocuments(data);
     } catch (err) {
       setError('Fetch failed. Please try again.');
       console.error('Fetch failed:', err);
@@ -93,20 +87,14 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/docs/delete/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
+      try {
+        await apiClient.del(`/api/docs/delete/${id}`, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+        setMessage('Document deleted successfully.');
+        fetchDocuments();
+      } catch (err) {
         setError('Delete failed. Please try again.');
         return;
       }
-      setMessage('Document deleted successfully.');
-      fetchDocuments();
     } catch (err) {
       setError('Delete failed. Please try again.');
       console.error('Delete failed:', err);
@@ -131,22 +119,14 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/analyze`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: docId }),
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/analyze', { id: docId }, { headers: { Authorization: `Bearer ${token}` } });
+        setAnalysis(result.data);
+        setMessage('Analysis complete!');
+      } catch (err) {
         setError('Failed to analyze document.');
         return;
       }
-      const data = await res.json();
-      setAnalysis(data);
-      setMessage('Analysis complete!');
     } catch (err) {
       setError('Analysis failed. Please try again.');
       console.error('Analysis failed:', err);

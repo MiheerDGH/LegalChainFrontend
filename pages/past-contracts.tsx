@@ -1,110 +1,125 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
+import apiClient from '../lib/apiClient';
 
-interface Contract {
-  id: string;
-  title: string;
-  partyA: string;
-  partyB: string;
-  createdAt: string;
-  downloadUrl?: string;
-}
+type Doc = { id: string; name: string; createdAt: string; url?: string };
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import supabase from '../lib/supabaseClient';
+import apiClient from '../lib/apiClient';
+
+type Doc = { id: string; name: string; createdAt: string; url?: string };
 
 export default function PastContractsPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchContracts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const session = await supabase.auth.getSession();
-        const token = session.data?.session?.access_token;
-        if (!token) {
-          setError('Session expired. Please log in again.');
-          router.push('/login');
-          return;
-        }
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/contracts`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (!res.ok) {
-          setError('Failed to fetch contracts.');
-          setLoading(false);
-          return;
-        }
-        const data = await res.json();
-        setContracts(data);
-      } catch (err) {
-        setError('Error fetching contracts.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchContracts();
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) router.push('/login');
+    })();
   }, [router]);
 
+  const fetchDocs = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
+      if (!token) {
+        setError('Session expired. Please sign in again.');
+        router.push('/login');
+        return;
+      }
+
+      const res = await apiClient.get('/api/docs', { headers: { Authorization: `Bearer ${token}` } });
+      setDocs(res.data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch past contracts:', err);
+      setError(err?.message || 'Failed to fetch documents.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocs();
+  }, []);
+
+  const handleDownload = async (id: string) => {
+    setError(null);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data?.session?.access_token;
+      if (!token) {
+        setError('Session expired. Please sign in again.');
+        router.push('/login');
+        return;
+      }
+
+      // Try to get a signed url from backend
+      try {
+        const res = await apiClient.get(`/api/docs/download/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = res.data || {};
+        if (data?.url) {
+          window.open(data.url, '_blank');
+          return;
+        }
+      } catch (e) {
+        // fallback to proxy download below
+        console.warn('Signed url fetch failed, falling back to proxy download', e);
+      }
+
+      // Fallback: fetch blob from proxy endpoint and download
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const dlUrl = `${base.replace(/\/$/, '')}/api/docs/download/${id}`;
+      const resp = await fetch(dlUrl, { headers: { Authorization: `Bearer ${session.data?.session?.access_token}` } });
+      if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const item = docs.find(d => d.id === id);
+      a.download = item?.name || 'document.pdf';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      setError(err?.message || 'Download failed.');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-3xl">
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
-            aria-label="Back"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back
-          </button>
+    <div className="min-h-screen bg-white text-gray-900 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Past Contracts</h1>
+          <button onClick={() => router.push('/dashboard')} className="text-sm text-blue-600 underline">Back to Dashboard</button>
         </div>
-        <h1 className="text-2xl font-bold mb-6 text-center">Past Contracts</h1>
+
+        {error && <div className="mb-4 text-red-600">{error}</div>}
         {loading ? (
-          <div className="flex justify-center items-center py-10">
-            <svg className="animate-spin h-8 w-8 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-            <span className="ml-4 text-yellow-600 font-semibold">Loading contracts...</span>
-          </div>
-        ) : error ? (
-          <div className="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-300">{error}</div>
-        ) : contracts.length === 0 ? (
-          <p className="text-sm text-gray-500">No contracts found.</p>
+          <div>Loading documents...</div>
+        ) : docs.length === 0 ? (
+          <div>No past contracts found.</div>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-4">
-            {contracts.map((contract) => (
-              <div key={contract.id} className="bg-gray-50 rounded p-4 shadow">
-                <h3 className="font-semibold">{contract.title}</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Parties: {contract.partyA} &amp; {contract.partyB}
-                </p>
-                <p className="text-sm text-gray-500 mb-2">
-                  Created: {new Date(contract.createdAt).toLocaleString()}
-                </p>
-                {contract.downloadUrl && (
-                  <a
-                    href={contract.downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                    aria-label={`Download contract ${contract.title}`}
-                  >
-                    Download Contract
-                  </a>
-                )}
-              </div>
+          <ul className="space-y-3">
+            {docs.map((d) => (
+              <li key={d.id} className="p-4 border rounded flex items-center justify-between">
+                <div>
+                  <div className="font-medium break-all">{d.name}</div>
+                  <div className="text-xs text-gray-500">Uploaded: {new Date(d.createdAt).toLocaleString()}</div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => handleDownload(d.id)} className="bg-blue-600 text-white px-3 py-1 rounded">Download</button>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </div>
