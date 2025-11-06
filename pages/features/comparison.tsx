@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import apiClient from '../../lib/apiClient';
 
 export default function DocumentComparisonPage() {
   const [file1, setFile1] = useState<File | null>(null);
@@ -28,19 +29,14 @@ export default function DocumentComparisonPage() {
       formData.append('file1', file1);
       formData.append('file2', file2);
 
-      const res = await fetch('/api/ai/compareDocuments', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/compareDocuments', formData);
+        const data = result.data;
+        setDifferences(data?.differences || 'No differences returned.');
+        setMessage('Comparison complete!');
+      } catch (err) {
         setError('Failed to compare documents. Please try again.');
-        setLoading(false);
-        return;
       }
-      const data = await res.json();
-      setDifferences(data.differences || 'No differences returned.');
-      setMessage('Comparison complete!');
     } catch (err) {
       setError('Error comparing documents. Please try again.');
     } finally {

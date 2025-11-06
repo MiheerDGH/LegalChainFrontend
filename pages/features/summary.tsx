@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import apiClient from '../../lib/apiClient';
 
 export default function DocumentSummaryPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -25,19 +26,14 @@ export default function DocumentSummaryPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/ai/summarizeDocument', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/summarizeDocument', formData);
+        const data = result.data;
+        setSummary(data?.summary || 'No summary returned.');
+        setMessage('Summary generated successfully!');
+      } catch (err) {
         setError('Failed to generate summary. Please try again.');
-        setLoading(false);
-        return;
       }
-      const data = await res.json();
-      setSummary(data.summary || 'No summary returned.');
-      setMessage('Summary generated successfully!');
     } catch (err) {
       setError('Error generating summary. Please try again.');
     } finally {

@@ -1,7 +1,8 @@
 // frontend/pages/features/legal-review.tsx (or your path)
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { postLegalReviewToBackend, ReviewResponse } from '../api/ai/legalReview';
+import ReviewResults from '../../components/ReviewResults';
+import apiClient from '../../lib/apiClient';
 
 export default function LegalReviewPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -32,30 +33,25 @@ export default function LegalReviewPage() {
             return;
         }
 
-        setLoading(true);
-        try {
-            const data: ReviewResponse = await postLegalReviewToBackend({ file, role });
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-            // Support both the new engine shape (findings[]) and the older temp shape (review)
-            if (data.findings && data.findings.length) {
-                setReviewResult(JSON.stringify({
-                    summary: data.summary,
-                    complianceScore: data.complianceScore,
-                    findings: data.findings,
-                }, null, 2));
-            } else if (data.review) {
-                setReviewResult(JSON.stringify(data.review, null, 2));
-            } else {
-                setReviewResult(JSON.stringify(data, null, 2));
-            }
-
-            setMessage('Legal review complete!');
-        } catch (err: any) {
-            setError(`Failed to run legal review. Details: ${err?.message ?? 'Unknown error'}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+      try {
+        const result = await apiClient.post('/api/ai/legalReview', formData);
+        const data = result.data;
+        setReviewResult(data?.analysis || 'No analysis returned.');
+        setMessage('Legal review complete!');
+      } catch (err) {
+        setError('Failed to run legal review. Please try again.');
+      }
+    } catch (err) {
+      setError('Error running legal review. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
     return (
         <div className="min-h-screen bg-gray-100 p-6 flex items-center justify-center">
@@ -107,13 +103,10 @@ export default function LegalReviewPage() {
                     </button>
                 </form>
 
-                {reviewResult && (
-                    <div className="mt-6 border-t pt-4">
-                        <h2 className="text-lg font-semibold mb-2">Analysis Result:</h2>
-                        <pre className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap">{reviewResult}</pre>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+        {reviewResult && (
+          <ReviewResults results={reviewResult} className="mt-6 border-t pt-4" />
+        )}
+      </div>
+    </div>
+  );
 }
