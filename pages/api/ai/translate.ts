@@ -26,7 +26,8 @@ const translateWithDeepL = async (text: string, targetLang: string) => {
     }
   );
 
-  return response.data.translations[0].text;
+  const respData: any = response.data;
+  return respData?.translations?.[0]?.text || "";
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
