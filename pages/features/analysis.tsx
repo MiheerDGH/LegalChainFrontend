@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import apiClient from '../../lib/apiClient';
 
 export default function DocumentAnalysisPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -23,18 +24,14 @@ export default function DocumentAnalysisPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/analyze', formData);
+        const data = result.data;
+        setAnalysisResult(data?.analysis || 'No analysis returned.');
+        setMessage('Analysis complete!');
+      } catch (err) {
         setError('Analysis failed. Please try again.');
-        setLoading(false);
-        return;
       }
-      const data = await res.json();
-      setAnalysisResult(data.analysis || 'No analysis returned.');
       setMessage('Analysis complete!');
     } catch (err) {
       setError('Analysis failed. Please try again.');

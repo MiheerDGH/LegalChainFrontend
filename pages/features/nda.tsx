@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import html2pdf from 'html2pdf.js';
+import ReviewResults from '../../components/ReviewResults';
+import apiClient from '../../lib/apiClient';
 
 export default function NdaGeneratorPage() {
   const [partyA, setPartyA] = useState('');
@@ -18,19 +20,15 @@ export default function NdaGeneratorPage() {
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch('/api/ai/generateNDA', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partyA, partyB, duration, confidentialInfo }),
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/generateNDA', { partyA, partyB, duration, confidentialInfo });
+        const data = result.data;
+        setPreviewContent(data?.nda || data?.text || 'No content returned.');
+      } catch (err: any) {
         setError('Failed to generate NDA. Please try again.');
         setLoading(false);
         return;
       }
-      const data = await res.json();
-      setPreviewContent(data.nda || data.text || 'No content returned.');
       setReviewResults(null);
       setMessage('NDA generated successfully!');
     } catch (err) {
@@ -47,22 +45,16 @@ export default function NdaGeneratorPage() {
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch('/api/ai/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ndaContent: previewContent }),
-      });
-
-      if (!res.ok) {
+      try {
+        const result = await apiClient.post('/api/ai/review', { ndaContent: previewContent });
+        setReviewResults(result.data);
+        setMessage('NDA review complete!');
+      } catch (err: any) {
         setError('Failed to review NDA. Please try again.');
         setReviewResults({ issues: ['Review failed. Please try again.'], suggestions: [], authorities: [] });
         setLoading(false);
         return;
       }
-
-      const data = await res.json();
-      setReviewResults(data);
-      setMessage('NDA review complete!');
     } catch (err) {
       setError('Error reviewing NDA. Please try again.');
       setReviewResults({ issues: ['An error occurred during review.'], suggestions: [], authorities: [] });
@@ -248,51 +240,7 @@ export default function NdaGeneratorPage() {
             </button>
 
             {reviewResults && (
-              <div className="mt-4 p-4 border rounded bg-gray-50">
-                <h4 className="font-semibold">Review Results</h4>
-                {reviewResults.issues && reviewResults.issues.length > 0 && (
-                  <div className="mt-2">
-                    <span className="font-medium">Issues:</span>
-                    <ul className="list-disc list-inside ml-4">
-                      {reviewResults.issues.map((issue: any, idx: number) => (
-                        <li key={idx} className="text-red-600">
-                          {typeof issue === 'string' ? issue : `${issue.section ? issue.section + ': ' : ''}${issue.finding || ''}`}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {reviewResults.suggestions && reviewResults.suggestions.length > 0 && (
-                  <div className="mt-2">
-                    <span className="font-medium">Suggestions:</span>
-                    <ul className="list-disc list-inside ml-4">
-                      {reviewResults.suggestions.map((suggestion: string, idx: number) => (
-                        <li key={idx} className="text-green-600">
-                          {suggestion}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {reviewResults.authorities && reviewResults.authorities.length > 0 && (
-                  <div className="mt-2">
-                    <span className="font-medium">Authorities:</span>
-                    <ul className="list-disc list-inside ml-4">
-                      {reviewResults.authorities.map((authority: any, idx: number) => (
-                        <li key={idx} className="text-blue-600">
-                          {authority.caseName ? `${authority.caseName} (${authority.citation})` : authority.citation}
-                          {authority.court ? ` — ${authority.court}` : ''}{authority.date ? ` (${authority.date})` : ''}
-                          {authority.url && (
-                            <a href={authority.url} target="_blank" rel="noreferrer" className="ml-2 text-blue-700 underline">link</a>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <ReviewResults results={reviewResults} className="mt-4" />
             )}
           </div>
         </div>
