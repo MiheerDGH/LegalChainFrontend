@@ -9,24 +9,29 @@ export const config = {
   },
 };
 
+interface TranslateAPIResponse {
+  translations: {
+    text: string;
+  }[];
+}
+
 // 🌐 DeepL API setup
 const DEEPL_API_URL = "https://api-free.deepl.com/v2/translate";
 const DEEPL_API_KEY = process.env.DEEPL_API_KEY!;
 
 const translateWithDeepL = async (text: string, targetLang: string) => {
-  const response = await axios.post(
-    DEEPL_API_URL,
-    new URLSearchParams({
-      auth_key: DEEPL_API_KEY,
-      text,
-      target_lang: targetLang,
-    }),
-    {
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    }
-  );
+const response = await axios.post<TranslateAPIResponse>(
+  "https://api-free.deepl.com/v2/translate",
+  new URLSearchParams({
+    auth_key: DEEPL_API_KEY,
+    text,
+    target_lang: targetLang,
+  }),
+  { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+);
 
-  return response.data.translations[0].text;
+return response.data.translations[0].text;
+
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
