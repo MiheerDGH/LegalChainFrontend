@@ -35,13 +35,60 @@ export default function ContractCreationPage() {
   const [structure, setStructure] = useState([]);
   const [hallucinationWarning, setHallucinationWarning] = useState<boolean>(false);
   const [warningsList, setWarningsList] = useState<string[]>([]);
-  const [contractType, setContractType] = useState(() => contractTypes?.[0]?.value || 'standard');
+  // Attempt to refresh contract types from backend; fall back to local list and
+  // always include any extra schemas discovered in `contractSchemas`.
+  const [remoteTypes, setRemoteTypes] = useState<any[] | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await apiClient.get('/api/ai/contractTypes');
+        // apiClient.get returns { data } when JSON; prefer data array
+        const list = Array.isArray(resp.data) ? resp.data : (resp.data && Array.isArray(resp.data.types) ? resp.data.types : null);
+        if (mounted && list && list.length) setRemoteTypes(list);
+      } catch (e) {
+        // ignore — we'll fall back to local contractTypes
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const mergedTypes = React.useMemo(() => {
+    // start with remote types if available, otherwise local contractTypes
+    const source = Array.isArray(remoteTypes) && remoteTypes.length ? remoteTypes : (Array.isArray(contractTypes) ? contractTypes : []);
+    // normalize entries to { value, label }
+    const normalized = source
+      .map((s: any) => {
+        if (!s) return null;
+        if (typeof s === 'string') return { value: String(s).trim().toLowerCase(), label: String(s).trim() };
+        const value = (s.value ?? s.key ?? '').toString().trim();
+        const label = (s.label ?? s.name ?? s.value ?? '').toString().trim();
+        return value ? { value: value.toLowerCase(), label } : null;
+      })
+      .filter(Boolean) as Array<{ value: string; label: string }>;
+
+    // include any schemas defined in contractSchemas (but avoid duplicates)
+    const extras = Object.values(contractSchemas || {}).map((s: any) => ({ value: String(s.key || '').toLowerCase(), label: (s.label || s.key || '').toString() }));
+
+    const combined: Array<{ value: string; label: string }> = [];
+    const seen = new Set<string>();
+    for (const it of [...normalized, ...extras]) {
+      if (!it || !it.value) continue;
+      if (seen.has(it.value)) continue;
+      seen.add(it.value);
+      combined.push({ value: it.value, label: it.label || it.value });
+    }
+    return combined;
+  }, [remoteTypes]);
+
+  const [contractType, setContractType] = useState(() => mergedTypes?.[0]?.value || 'standard');
   const [error, setError] = useState<string | null>(null);
   // For dev debug: capture last request and raw response
   const [lastRequestPayload, setLastRequestPayload] = useState<any | null>(null);
   const [lastResponseRaw, setLastResponseRaw] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [showWarnings, setShowWarnings] = useState(false);
+  const [debugFields, setDebugFields] = useState<any | null>(null);
 
   // When contract type changes, seed form fields from schema
   useEffect(() => {
@@ -135,11 +182,8 @@ export default function ContractCreationPage() {
       }
     }
 
-    if (schemaHasClauses && clauseObjects.length === 0) {
-      setError('Please add at least one clause.');
-      setLoading(false);
-      return;
-    }
+    // Removed blocking validation requiring at least one clause.
+    // Backend is expected to handle an empty clauses[] (may synthesize content or ask follow-ups).
     try {
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       const session = refreshData?.session;
@@ -162,18 +206,29 @@ export default function ContractCreationPage() {
 
       // Build payload matching backend expectations
       const payload = {
+        // Include canonical base fields explicitly
+        contractType: contractType || 'service',
         type: contractType || 'service',
+        partyA: parties[0] || '',
+        partyB: parties[1] || '',
         parties,
         jurisdiction: formValues.jurisdiction || jurisdiction,
         effectiveDate: formValues.effectiveDate || effectiveDate || undefined,
+        // clauses may be empty; include them so backend can decide how to proceed
         clauses: clauseObjects,
         clauseKeywords: makeClauseKeywords(rawClauses || []),
       };
 
       try {
         setLastRequestPayload(payload);
-        const result = await apiClient.post('/api/ai/generateContract', payload, { headers: { Authorization: `Bearer ${token}` } });
+        // When in debug mode, ask backend to return debugFields (either via query or body)
+        const path = showDebug ? '/api/ai/generateContract?debug=true' : '/api/ai/generateContract';
+        const payloadToSend = { ...payload, ...(showDebug ? { _debug: true } : {}) };
+        const result = await apiClient.post(path, payloadToSend, { headers: { Authorization: `Bearer ${token}` } });
         const responseData = result.data || {};
+        // capture debugFields if backend returned them (helpful to iterate on form)
+  const df = (responseData as any)?.debugFields || (result as any)?.normalizedContract?.debugFields || (responseData as any)?.debug?.fields || null;
+        setDebugFields(df);
         setLastResponseRaw(result.raw || null);
         console.log('🧾 Contract response:', responseData, 'normalized:', result.normalizedContract);
 
@@ -234,7 +289,7 @@ export default function ContractCreationPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-100 text-gray-800 py-10 px-4 flex flex-col items-center">
+  <div className="min-h-screen bg-gray-100 text-gray-800 py-6 px-4 flex flex-col items-center compact-form">
       {/* Back Button */}
       <div className="w-full max-w-2xl mb-4">
         <button
@@ -250,22 +305,22 @@ export default function ContractCreationPage() {
         </button>
       </div>
 
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-2xl">
+  <div className="bg-white shadow-lg rounded-xl p-6 w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-6 text-center">Contract Generator</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+  <form onSubmit={handleSubmit} className="space-y-4">
           {/* Contract Type selector first */}
           <div>
             <label className="block font-medium mb-1" htmlFor="contract-type">Contract Type</label>
             <select
               id="contract-type"
-              className="w-full border px-4 py-3 rounded-md"
+              className="w-full border px-3 py-2 rounded-md"
               value={contractType}
               onChange={(e) => setContractType(e.target.value)}
               required
               aria-label="Contract Type"
             >
-              {contractTypes.map((ct) => (
+              {mergedTypes.map((ct) => (
                 <option key={ct.value} value={ct.value}>{ct.label}</option>
               ))}
             </select>
@@ -280,7 +335,7 @@ export default function ContractCreationPage() {
               id="jurisdiction"
               value={formValues.jurisdiction ?? jurisdiction}
               onChange={(e) => { setFormValues(prev => ({ ...prev, jurisdiction: e.target.value })); setJurisdiction(e.target.value); }}
-              className="w-full border px-4 py-3 rounded-md"
+              className="w-full border px-3 py-2 rounded-md"
               required
             >
               <option value="">Select a state or country</option>
@@ -309,10 +364,10 @@ export default function ContractCreationPage() {
                       <div key={f.key}>
                         <label className="block font-medium mb-1">{f.label}</label>
                         {partiesArr.map((p, i) => (
-                          <input
-                            key={i}
-                            type="text"
-                            className="w-full border px-4 py-3 rounded-md mb-2"
+              <input
+                key={i}
+                type="text"
+                className="w-full border px-3 py-2 rounded-md mb-2"
                             placeholder={i === 0 ? 'Party A' : `Party ${i + 1}`}
                             value={p}
                             onChange={(e) => {
@@ -338,11 +393,11 @@ export default function ContractCreationPage() {
                       <div key={f.key}>
                         <label className="block font-medium mb-1">{f.label}</label>
                         <input
-                          type="date"
-                          className="w-full border px-4 py-3 rounded-md"
-                          value={formValues[f.key] || ''}
-                          onChange={(e) => setFormValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                        />
+                              type="date"
+                              className="w-full border px-3 py-2 rounded-md"
+                              value={formValues[f.key] || ''}
+                              onChange={(e) => setFormValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                            />
                       </div>
                     );
                   }
@@ -352,7 +407,7 @@ export default function ContractCreationPage() {
                       <div key={f.key}>
                         <label className="block font-medium mb-1">{f.label}</label>
                         <textarea
-                          className="w-full border px-4 py-2 rounded-md"
+                          className="w-full border px-3 py-2 rounded-md"
                           placeholder={f.placeholder || ''}
                           value={formValues[f.key] || ''}
                           onChange={(e) => setFormValues(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -369,7 +424,7 @@ export default function ContractCreationPage() {
                         {items.map((it, idx) => (
                           <textarea
                             key={idx}
-                            className="w-full border px-4 py-2 rounded-md mb-2"
+                            className="w-full border px-3 py-2 rounded-md mb-2"
                             placeholder={f.placeholder || `Item ${idx + 1}`}
                             value={it}
                             onChange={(e) => {
@@ -390,11 +445,11 @@ export default function ContractCreationPage() {
 
                   // default to simple text input
                   return (
-                    <div key={f.key}>
+                      <div key={f.key}>
                       <label className="block font-medium mb-1">{f.label}</label>
                       <input
                         type="text"
-                        className="w-full border px-4 py-3 rounded-md"
+                        className="w-full border px-3 py-2 rounded-md"
                         placeholder={f.placeholder || ''}
                         value={formValues[f.key] || ''}
                         onChange={(e) => setFormValues(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -407,10 +462,14 @@ export default function ContractCreationPage() {
           })()}
 
           <div>
+            <div className="flex items-center gap-2 mb-3">
+              <input id="debug-toggle" type="checkbox" checked={showDebug} onChange={(e) => setShowDebug(e.target.checked)} />
+              <label htmlFor="debug-toggle" className="text-sm">Enable debug (request backend debugFields)</label>
+            </div>
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 bg-blue-600 text-white font-semibold rounded-md ${
+              className={`w-full py-2 bg-blue-600 text-white font-semibold rounded-md ${
                 loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
               }`}
             >
@@ -428,7 +487,7 @@ export default function ContractCreationPage() {
 
       {/* ✅ Inline Preview Section */}
       {contract && (
-        <div className="bg-white mt-10 p-6 rounded-xl shadow-md w-full max-w-3xl">
+        <div className="bg-white mt-6 p-4 rounded-xl shadow-md w-full max-w-3xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Generated Contract</h2>
             <button
@@ -511,6 +570,13 @@ export default function ContractCreationPage() {
               Download TXT
             </button>
           </div>
+          {/* Debug fields returned by backend when debug mode is enabled */}
+          {showDebug && debugFields && (
+            <div className="mt-4 bg-gray-50 border rounded p-3 text-sm">
+              <div className="font-semibold mb-2">Backend debugFields (present / missing):</div>
+              <pre className="overflow-auto text-xs">{JSON.stringify(debugFields, null, 2)}</pre>
+            </div>
+          )}
         </div>
       )}
       </div>

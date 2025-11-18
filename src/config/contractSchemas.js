@@ -184,6 +184,44 @@ export const contractSchemas = {
     ]
   },
 
+  SAFE: {
+    key: 'SAFE',
+    label: 'SAFE (Simple Agreement for Future Equity)',
+    description: 'Investor provides funds now in exchange for future equity on qualifying events; includes valuation cap, discount and conversion terms.',
+    fields: [
+      { key: 'investor', label: 'Investor', type: 'text' },
+      { key: 'company', label: 'Company', type: 'text' },
+      { key: 'investmentAmount', label: 'Investment Amount', type: 'currency' },
+      { key: 'valuationCap', label: 'Valuation Cap', type: 'text', optional: true },
+      { key: 'discountRate', label: 'Discount Rate', type: 'text', optional: true, placeholder: 'e.g., 20%'},
+      { key: 'conversionTerms', label: 'Conversion Terms', type: 'textarea', optional: true },
+      { key: 'maturityDate', label: 'Maturity Date / Term', type: 'date', optional: true },
+      { key: 'investorRights', label: 'Investor Rights (e.g., information, pro rata)', type: 'textarea', optional: true },
+      { key: 'transferRestrictions', label: 'Transfer Restrictions', type: 'textarea', optional: true },
+      { key: 'closingConditions', label: 'Closing Conditions', type: 'textarea', optional: true },
+      { key: 'jurisdiction', label: 'Governing Law / Jurisdiction', type: 'text', optional: true }
+    ]
+  },
+
+  EQUITY: {
+    key: 'EQUITY',
+    label: 'Equity / Stock Purchase Agreement',
+    description: 'Purchase of equity securities: purchase price, number of shares, representations, vesting and transfer restrictions.',
+    fields: [
+      { key: 'buyer', label: 'Buyer', type: 'text' },
+      { key: 'seller', label: 'Seller', type: 'text' },
+      { key: 'shareClass', label: 'Share Class', type: 'text', optional: true },
+      { key: 'numberOfShares', label: 'Number of Shares', type: 'text' },
+      { key: 'purchasePrice', label: 'Purchase Price', type: 'currency' },
+      { key: 'vestingSchedule', label: 'Vesting Schedule (if applicable)', type: 'textarea', optional: true },
+      { key: 'representationsWarranties', label: 'Representations & Warranties', type: 'textarea', optional: true },
+      { key: 'closingDate', label: 'Closing Date', type: 'date', optional: true },
+      { key: 'conditionsPrecedent', label: 'Conditions Precedent', type: 'textarea', optional: true },
+      { key: 'transferRestrictions', label: 'Transfer Restrictions / Right of First Refusal', type: 'textarea', optional: true },
+      { key: 'jurisdiction', label: 'Governing Law / Jurisdiction', type: 'text', optional: true }
+    ]
+  },
+
   SALES: {
     key: 'SALES',
     label: 'Sales Agreement',
