@@ -1,11 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import supabase from '../lib/supabaseClient';
-import apiClient from '../lib/apiClient';
-
-type Doc = { id: string; name: string; createdAt: string; url?: string };
-
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState} from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
 import apiClient from '../lib/apiClient';
