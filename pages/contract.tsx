@@ -3,7 +3,12 @@ import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
 import apiClient from '../lib/apiClient';
 import contractTypes from '../config/contractTypes';
-import contractSchemas from '../src/config/contractSchemas';
+import contractSchemas from '../config/contractSchemas';
+import dynamic from "next/dynamic";
+
+const ContractRenderer = dynamic(() => import("../components/ContractRenderer"), {
+  ssr: false,
+});
 
 const jurisdictions = [
   { id: 'US-CA', label: 'California, United States' },
@@ -485,13 +490,11 @@ export default function ContractCreationPage() {
                 {/* Debug panel toggle shown above; actual debug panel is rendered as a fixed, dev-only sidebar to avoid overlapping the contract preview */}
               </div>
             )}
-
-            {/* @ts-ignore */}
-            {React.createElement(require('../components/ContractRenderer').default, {
-              contract,
-              references,
-              structure,
-            })}
+            <ContractRenderer
+              contract={contract}
+              references={references}
+              structure={structure}
+            />
           </div>
 
           <div className="mt-4 flex justify-end gap-4">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import html2pdf from 'html2pdf.js';
 import ReviewResults from '../../components/ReviewResults';
 import apiClient from '../../lib/apiClient';
+
 
 export default function NdaGeneratorPage() {
   const [partyA, setPartyA] = useState('');
@@ -63,20 +63,23 @@ export default function NdaGeneratorPage() {
     }
   };
 
-  const downloadAsPDF = () => {
-    const element = document.getElementById('nda-preview');
-    if (!element) return;
+const downloadAsPDF = async () => {
+  const element = document.getElementById("nda-preview");
+  if (!element) return;
 
-    const opt = {
-      margin: 0.5,
-      filename: 'nda.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {},
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-    };
+  const html2pdf = (await import("html2pdf.js")).default;
 
-    html2pdf().from(element).set(opt).save();
+  const opt = {
+    margin: 0.5,
+    filename: "nda.pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: {},
+    jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
   };
+
+  html2pdf().from(element).set(opt).save();
+};
+
 
   const downloadAsTXT = () => {
     if (!previewContent) return;
