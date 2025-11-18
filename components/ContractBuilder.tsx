@@ -33,9 +33,8 @@ export default function ContractBuilder() {
   useEffect(() => {
     // Prefer local schemas shipped in src/config/contractSchemas.js (from product sheet).
     try {
-  // Include canonical contract types: STANDARD, SERVICE, NDA, EMPLOYMENT, SALES, LEASE,
-  // and additional investment/IP types: SAFE, EQUITY, IP_LICENSE
-  const allowed = ['STANDARD', 'SERVICE', 'NDA', 'EMPLOYMENT', 'SALES', 'LEASE', 'SAFE', 'EQUITY', 'IP_LICENSE'];
+  // Include canonical contract types: STANDARD, SERVICE, NDA, EMPLOYMENT, SALES, LEASE
+  const allowed = ['STANDARD', 'SERVICE', 'NDA', 'EMPLOYMENT', 'SALES', 'LEASE'];
       const local = Object.values(contractSchemas || {})
         .map((s: any) => ({ key: s.key, displayName: s.label || s.key }))
         .filter((t: any) => allowed.includes(String(t.key).toUpperCase()));
@@ -136,18 +135,14 @@ export default function ContractBuilder() {
       return;
     }
     const goodClauses = clauses.map(c => (c || '').trim()).filter(Boolean);
-    // NOTE: Removed blocking validation that required at least one clause.
-    // The backend will accept an empty clauses[] and may synthesize text or ask clarifying
-    // questions if needed. We still include clauses (possibly empty) in the payload.
+    if (goodClauses.length === 0) {
+      setError('Please add at least one clause.');
+      return;
+    }
 
     const payload: Record<string, any> = {
-      // base fields (always include explicit base keys)
-      contractType: selectedType,
       type: selectedType,
-      partyA: goodParties[0] || '',
-      partyB: goodParties[1] || '',
       parties: goodParties,
-      // include clauses array (may be empty)
       clauses: goodClauses.map((c: string) => ({ id: null, text: c })),
       jurisdiction: formValues.jurisdiction || formValues.governingLaw || '',
       effectiveDate: formValues.effectiveDate || undefined,
@@ -178,7 +173,7 @@ export default function ContractBuilder() {
 
     // heuristics
     const lower = label.toLowerCase();
-  if (f.options && Array.isArray(f.options)) {
+    if (f.options && Array.isArray(f.options)) {
       return (
         <div key={key} className="mb-4">
           <label className="block font-medium mb-1">{label}</label>
@@ -252,9 +247,6 @@ export default function ContractBuilder() {
         </div>
       );
     }
-
-    
-
 
     // fallback
     return (

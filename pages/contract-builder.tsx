@@ -1,8 +1,6 @@
-import dynamic from 'next/dynamic';
+import React from 'react';
+import ContractBuilder from '../components/ContractBuilder';
 import Head from 'next/head';
-
-// Dynamically import the ContractBuilder client-side to avoid SSR-only imports
-const ContractBuilder = dynamic(() => import('../components/ContractBuilder'), { ssr: false });
 
 export default function ContractBuilderPage() {
   return (

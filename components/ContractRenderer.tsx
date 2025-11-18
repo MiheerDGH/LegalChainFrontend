@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import DOMPurify from 'dompurify';
 
 type Reference = { citation?: string; caseName?: string; court?: string; date?: string; url?: string };
 type Section = { heading: string; id: string };
@@ -7,15 +8,7 @@ function sanitizeHtml(input: string) {
   if (!input) return '';
   // Use DOMPurify for robust sanitization; allow target attribute for links
   try {
-    if (typeof window !== 'undefined') {
-      // Load DOMPurify on the client only to avoid SSR errors
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const DOMPurifyRaw = require('dompurify');
-      const createDOMPurify = DOMPurifyRaw.default || DOMPurifyRaw;
-      const dp = createDOMPurify(window as any);
-      return dp.sanitize(input, { ADD_ATTR: ['target'] });
-    }
-    // If no window (SSR), fall through to naive sanitizer below
+    return DOMPurify.sanitize(input, { ADD_ATTR: ['target'] });
   } catch (e) {
     // Fallback to naive sanitizer if DOMPurify fails
     let out = input.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
