@@ -177,11 +177,8 @@ export default function ContractCreationPage() {
       }
     }
 
-    if (schemaHasClauses && clauseObjects.length === 0) {
-      setError('Please add at least one clause.');
-      setLoading(false);
-      return;
-    }
+    // Removed blocking validation requiring at least one clause.
+    // Backend is expected to handle an empty clauses[] (may synthesize content or ask follow-ups).
     try {
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       const session = refreshData?.session;
@@ -204,10 +201,15 @@ export default function ContractCreationPage() {
 
       // Build payload matching backend expectations
       const payload = {
+        // Include canonical base fields explicitly
+        contractType: contractType || 'service',
         type: contractType || 'service',
+        partyA: parties[0] || '',
+        partyB: parties[1] || '',
         parties,
         jurisdiction: formValues.jurisdiction || jurisdiction,
         effectiveDate: formValues.effectiveDate || effectiveDate || undefined,
+        // clauses may be empty; include them so backend can decide how to proceed
         clauses: clauseObjects,
         clauseKeywords: makeClauseKeywords(rawClauses || []),
       };

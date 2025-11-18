@@ -136,14 +136,18 @@ export default function ContractBuilder() {
       return;
     }
     const goodClauses = clauses.map(c => (c || '').trim()).filter(Boolean);
-    if (goodClauses.length === 0) {
-      setError('Please add at least one clause.');
-      return;
-    }
+    // NOTE: Removed blocking validation that required at least one clause.
+    // The backend will accept an empty clauses[] and may synthesize text or ask clarifying
+    // questions if needed. We still include clauses (possibly empty) in the payload.
 
     const payload: Record<string, any> = {
+      // base fields (always include explicit base keys)
+      contractType: selectedType,
       type: selectedType,
+      partyA: goodParties[0] || '',
+      partyB: goodParties[1] || '',
       parties: goodParties,
+      // include clauses array (may be empty)
       clauses: goodClauses.map((c: string) => ({ id: null, text: c })),
       jurisdiction: formValues.jurisdiction || formValues.governingLaw || '',
       effectiveDate: formValues.effectiveDate || undefined,
