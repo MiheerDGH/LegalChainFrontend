@@ -1,17 +1,18 @@
-import type { NextConfig } from "next";
-import type { Redirect } from "next/dist/lib/load-custom-routes";
+// next.config.ts (or next.config.mjs)
 
-const redirects: Redirect[] = [
-  {
-    source: "/",
-    destination: "/login",
-    permanent: false,
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,  // disables ESLint errors on Vercel
   },
-];
-
-const nextConfig: NextConfig = {
   async redirects() {
-    return redirects;
+    return [
+      {
+        source: "/",
+        destination: "/login",
+        permanent: false,
+      },
+    ];
   },
   // Skip ESLint during build to avoid strict lint rules blocking CI/builds here.
   // We still recommend addressing lint warnings/errors in PRs, but for rapid
@@ -22,3 +23,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
