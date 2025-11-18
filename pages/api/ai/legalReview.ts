@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import fs from "fs";
 import nlp from "compromise";
+import mammoth from "mammoth";
 
 const analyzeLegalDocument = (text: string) => {
   const doc = nlp(text);
@@ -97,19 +98,23 @@ export default async function handler(
       let text = "";
 
       if (mimetype === "application/pdf" || originalName.endsWith(".pdf")) {
-        // PDF parsing requires optional dependency `pdf-parse` which may not be
-        // installed in this environment. Return an instructive error so the
-        // caller can upload a TXT/DOCX or install the optional dependency.
-        return res.status(501).json({ error: 'PDF extraction requires optional dependency "pdf-parse". Please install it on the server or upload a TXT/DOCX file.' });
+        const mod = await import("pdf-parse");
+
+        // Cast through `unknown` to satisfy TS
+        const pdfParse = mod.default as unknown as (
+        data: Buffer
+        ) => Promise<{ text: string }>;
+
+        const data = await pdfParse(fs.readFileSync(filepath));
+        text = data.text;
       } else if (
         mimetype ===
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
         originalName.endsWith(".docx")
       ) {
-        // DOCX parsing requires optional dependency `mammoth` which may not be
-        // installed in this environment. Return an instructive error so the
-        // caller can upload a TXT/PDF or install the optional dependency.
-        return res.status(501).json({ error: 'DOCX extraction requires optional dependency "mammoth". Please install it on the server or upload a TXT/PDF file.' });
+        // DOCX handling
+        const result = await mammoth.extractRawText({ path: filepath });
+        text = result.value;
       } else if (
         mimetype === "text/plain" ||
         originalName.endsWith(".txt") ||

@@ -33,9 +33,8 @@ export default function ContractBuilder() {
   useEffect(() => {
     // Prefer local schemas shipped in src/config/contractSchemas.js (from product sheet).
     try {
-  // Include canonical contract types: STANDARD, SERVICE, NDA, EMPLOYMENT, SALES, LEASE,
-  // and additional investment/IP types: SAFE, EQUITY, IP_LICENSE
-  const allowed = ['STANDARD', 'SERVICE', 'NDA', 'EMPLOYMENT', 'SALES', 'LEASE', 'SAFE', 'EQUITY', 'IP_LICENSE'];
+  // Include canonical contract types: STANDARD, SERVICE, NDA, EMPLOYMENT, SALES, LEASE
+  const allowed = ['STANDARD', 'SERVICE', 'NDA', 'EMPLOYMENT', 'SALES', 'LEASE'];
       const local = Object.values(contractSchemas || {})
         .map((s: any) => ({ key: s.key, displayName: s.label || s.key }))
         .filter((t: any) => allowed.includes(String(t.key).toUpperCase()));
@@ -174,7 +173,7 @@ export default function ContractBuilder() {
 
     // heuristics
     const lower = label.toLowerCase();
-  if (f.options && Array.isArray(f.options)) {
+    if (f.options && Array.isArray(f.options)) {
       return (
         <div key={key} className="mb-4">
           <label className="block font-medium mb-1">{label}</label>
@@ -248,9 +247,6 @@ export default function ContractBuilder() {
         </div>
       );
     }
-
-    
-
 
     // fallback
     return (
