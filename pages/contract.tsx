@@ -62,13 +62,29 @@ export default function ContractCreationPage() {
       })
       .filter(Boolean) as Array<{ value: string; label: string }>;
 
+    // Prefer labels from our canonical contractSchemas when available
+    const normalizedWithSchemaLabels = normalized.map((it) => {
+      try {
+        const key = (it.value || '').toString().toUpperCase();
+        const schema = (contractSchemas as any)[key];
+        if (schema && schema.label) return { value: it.value, label: schema.label };
+      } catch (e) {
+        // ignore and fall back to existing label
+      }
+      return it;
+    });
+
     // include any schemas defined in contractSchemas (but avoid duplicates)
     const extras = Object.values(contractSchemas || {}).map((s: any) => ({ value: String(s.key || '').toLowerCase(), label: (s.label || s.key || '').toString() }));
 
     const combined: Array<{ value: string; label: string }> = [];
     const seen = new Set<string>();
-    for (const it of [...normalized, ...extras]) {
+    for (const it of [...normalizedWithSchemaLabels, ...extras]) {
       if (!it || !it.value) continue;
+      // Remove duplicate 'equity agreement' and 'ip transfer agreement' (case-insensitive, also filter out if value matches)
+      const lowerLabel = (it.label || '').toLowerCase();
+      const lowerValue = (it.value || '').toLowerCase();
+      if (lowerLabel === 'equity agreement' || lowerLabel === 'ip transfer agreement' || lowerValue === 'equity agreement' || lowerValue === 'ip transfer agreement') continue;
       if (seen.has(it.value)) continue;
       seen.add(it.value);
       combined.push({ value: it.value, label: it.label || it.value });
