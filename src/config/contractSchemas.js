@@ -1,7 +1,7 @@
 export const contractSchemas = {
   STANDARD: {
     key: 'STANDARD',
-    label: 'Standard Contract',
+    label: 'Starting Contract',
     description: 'Generic contract with clauses, parties, governing law, and signatures.',
     fields: [
       { key: 'title', label: 'Title', type: 'text', placeholder: 'Agreement Title (optional)', optional: true },
@@ -16,7 +16,7 @@ export const contractSchemas = {
 
   SERVICE: {
     key: 'SERVICE',
-    label: 'Service Agreement (SOW)',
+    label: 'Services Agreement',
     description: 'Scope of services, deliverables, fees, acceptance criteria, timelines.',
     fields: [
       { key: 'parties', label: 'Parties', type: 'parties', min: 2 },
@@ -109,7 +109,7 @@ export const contractSchemas = {
 
   LEASE: {
     key: 'LEASE',
-    label: 'Lease Agreement',
+    label: 'Lease/Rental Agreement',
     fields: [
       { key: 'landlord', label: 'Landlord', type: 'text' },
       { key: 'tenant', label: 'Tenant', type: 'text' },
@@ -172,7 +172,7 @@ export const contractSchemas = {
 
   IP_LICENSE: {
     key: 'IP_LICENSE',
-    label: 'IP License',
+    label: 'IP Transfer Agreements',
     fields: [
       { key: 'licensor', label: 'Licensor', type: 'text' },
       { key: 'licensee', label: 'Licensee', type: 'text' },
@@ -186,7 +186,7 @@ export const contractSchemas = {
 
   SAFE: {
     key: 'SAFE',
-    label: 'SAFE (Simple Agreement for Future Equity)',
+    label: 'SAFEs (Simple Agreements for Future Equity)',
     description: 'Investor provides funds now in exchange for future equity on qualifying events; includes valuation cap, discount and conversion terms.',
     fields: [
       { key: 'investor', label: 'Investor', type: 'text' },
@@ -205,7 +205,7 @@ export const contractSchemas = {
 
   EQUITY: {
     key: 'EQUITY',
-    label: 'Equity / Stock Purchase Agreement',
+    label: 'Equity Agreements',
     description: 'Purchase of equity securities: purchase price, number of shares, representations, vesting and transfer restrictions.',
     fields: [
       { key: 'buyer', label: 'Buyer', type: 'text' },
