@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState} from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
 import apiClient from '../lib/apiClient';
@@ -118,4 +118,3 @@ export default function PastContractsPage() {
     </div>
   );
 }
-
