@@ -30,6 +30,7 @@ export default function ContractCreationPage() {
   const [structure, setStructure] = useState([]);
   const [hallucinationWarning, setHallucinationWarning] = useState<boolean>(false);
   const [warningsList, setWarningsList] = useState<string[]>([]);
+  const [defaultClauseUsed, setDefaultClauseUsed] = useState<boolean>(false);
   // Attempt to refresh contract types from backend; fall back to local list and
   // always include any extra schemas discovered in `contractSchemas`.
   const [remoteTypes, setRemoteTypes] = useState<any[] | null>(null);
@@ -88,6 +89,11 @@ export default function ContractCreationPage() {
       if (seen.has(it.value)) continue;
       seen.add(it.value);
       combined.push({ value: it.value, label: it.label || it.value });
+    }
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        console.debug('[Contract] mergedTypes', combined);
+      } catch {}
     }
     return combined;
   }, [remoteTypes]);
@@ -193,8 +199,11 @@ export default function ContractCreationPage() {
       }
     }
 
-    if (schemaHasClauses && clauseObjects.length === 0) {
-      setError('Please add at least one clause.');
+    // NEW: Allow empty clauses; only validate required base fields
+    const effective = formValues.effectiveDate || effectiveDate;
+    const juris = formValues.jurisdiction || jurisdiction;
+    if (!effective || !juris || !contractType || parties.length < minParties) {
+      setError('Please fill Party A, Party B, Effective Date, Jurisdiction and Contract Type.');
       setLoading(false);
       return;
     }
@@ -219,12 +228,28 @@ export default function ContractCreationPage() {
       }
 
       // Build payload matching backend expectations
+      // Collect extra (schema-specific) fields excluding base ones
+      const baseKeys = new Set(['parties','jurisdiction','effectiveDate','clauses']);
+      const extra: Record<string, any> = {};
+      for (const f of (schema.fields || [])) {
+        const k = f.key;
+        if (baseKeys.has(k)) continue;
+        const v = (formValues as any)[k];
+        if (Array.isArray(v)) {
+          if (v.filter(Boolean).length) extra[k] = v.filter(Boolean);
+        } else if (v !== undefined && v !== '') {
+          extra[k] = v;
+        }
+      }
       const payload = {
-        type: contractType || 'service',
+        type: contractType.toUpperCase(),
+        partyA: parties[0] || '',
+        partyB: parties[1] || '',
         parties,
-        jurisdiction: formValues.jurisdiction || jurisdiction,
-        effectiveDate: formValues.effectiveDate || effectiveDate || undefined,
-        clauses: clauseObjects,
+        jurisdiction: juris,
+        effectiveDate: effective,
+        clauses: clauseObjects, // may be empty, backend can inject defaults
+        extra,
         clauseKeywords: makeClauseKeywords(rawClauses || []),
       };
 
@@ -250,6 +275,8 @@ export default function ContractCreationPage() {
           setStructure((responseData.structure || []) as any);
           setHallucinationWarning(Boolean(normalized.hallucinationWarning));
           setWarningsList(Array.isArray(normalized.warnings) ? normalized.warnings : []);
+          const usedDefaults = Boolean((responseData.structure && responseData.structure.extra && responseData.structure.extra._usedDefaultClauses) || (normalized.warnings || []).some((w: string) => /default clause templates were used/i.test(w)));
+          setDefaultClauseUsed(usedDefaults);
         } else {
           // fallback to legacy fields
           setContract(responseData.contractText || responseData.contract || 'No contract generated.');
@@ -257,6 +284,8 @@ export default function ContractCreationPage() {
           setStructure(responseData.structure || []);
           setHallucinationWarning(Boolean(responseData.hallucinationWarning));
           setWarningsList(Array.isArray(responseData.warnings) ? responseData.warnings : []);
+          const usedDefaults = Boolean((responseData.structure && responseData.structure.extra && responseData.structure.extra._usedDefaultClauses) || (responseData.warnings || []).some((w: string) => /default clause templates were used/i.test(w)));
+          setDefaultClauseUsed(usedDefaults);
         }
       } catch (err: any) {
         // Prefer error.raw if available for debugging snippets
@@ -514,6 +543,31 @@ export default function ContractCreationPage() {
 
           {/* Use ContractRenderer for preview */}
           <div id="contract-preview">
+            {defaultClauseUsed && (
+              <div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 text-blue-800">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <strong>Info:</strong> No clauses provided — default clause templates were used to generate this contract. You can edit clauses below and regenerate if needed.
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // scroll to clauses textarea(s)
+                        const el = document.querySelector('textarea[placeholder*="clause"], textarea');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="text-xs underline"
+                    >Edit clauses</button>
+                    <button
+                      type="button"
+                      onClick={() => setContract('')}
+                      className="text-xs underline"
+                    >Clear preview</button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Warnings / hallucination banner */}
             {(hallucinationWarning || (warningsList && warningsList.length > 0)) && (
               <div className="mb-4 p-3 rounded bg-yellow-50 border border-yellow-200 text-yellow-800">
