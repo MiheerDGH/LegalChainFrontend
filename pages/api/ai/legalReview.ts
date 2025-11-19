@@ -1,78 +1,139 @@
-// frontend/lib/legalReview.ts
-// Calls the BACKEND /api/review endpoint with Supabase JWT and FormData.
+import type { NextApiRequest, NextApiResponse } from "next";
+import formidable from "formidable";
+import fs from "fs";
+import nlp from "compromise";
 
-import { createClient } from '@supabase/supabase-js';
+const analyzeLegalDocument = (text: string) => {
+  const doc = nlp(text);
+  const issues: string[] = [];
+  const suggestions: string[] = [];
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!; // e.g., http://localhost:5000
+  const hasGoverningLaw = /governing law|jurisdiction/i.test(text);
+  const hasIndemnification = /indemnif(y|ication)/i.test(text);
+  const hasLiabilityLimit = /limitation of liability|liability cap/i.test(text);
+  const hasRenewal = /automatic renewal|renewal term/i.test(text);
+  const hasTermination = /termination|cancel|exit clause/i.test(text);
+  const hasForceMajeure = /force majeure/i.test(text);
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const verbs = doc.verbs().out("array");
+  const legalVerbs = verbs.filter((v) =>
+    ["indemnify", "terminate", "govern", "renew", "compensate"].includes(
+      v.toLowerCase()
+    )
+  );
 
-export type ReviewFinding = {
-    id: string;
-    clauseId?: string;
-    clauseTitle?: string;
-    clauseText: string;
-    issueCode: string;
-    issueText: string;
-    severity: 'low' | 'med' | 'high';
-    references?: { citation: string; caseName?: string; court?: string; date?: string; url?: string }[];
+  if (!hasGoverningLaw) {
+    issues.push("Missing governing law clause");
+    suggestions.push("Add a clause specifying jurisdiction and applicable law.");
+  }
+
+  if (hasIndemnification && !hasLiabilityLimit) {
+    issues.push("Indemnification clause without liability cap");
+    suggestions.push("Add a limitation of liability to balance risk exposure.");
+  }
+
+  if (hasRenewal) {
+    suggestions.push("Clarify renewal terms and opt-out procedures.");
+  }
+
+  if (!hasTermination) {
+    issues.push("No termination clause found");
+    suggestions.push("Include terms for early termination or breach.");
+  }
+
+  if (!hasForceMajeure) {
+    suggestions.push(
+      "Consider adding a force majeure clause to cover unforeseeable events."
+    );
+  }
+
+  const complianceScore = Math.min(
+    100,
+    60 + 5 * legalVerbs.length - 10 * issues.length
+  );
+
+  return {
+    complianceScore,
+    issues,
+    suggestions,
+    summary: `Document reviewed for legal compliance and enforceability. Found ${issues.length} issue(s).`,
+  };
 };
 
-export type ReviewResponse = {
-    documentId?: string;
-    findings?: ReviewFinding[];
-    summary?: string;
-    role?: 'sender' | 'recipient';
-    complianceScore?: number;
-    // older temp shape support (if backend still returns it)
-    review?: {
-        complianceScore: number;
-        issues: string[];
-        suggestions: string[];
-        summary: string;
-    };
+export const config = {
+  api: {
+    bodyParser: false, // Required for formidable to handle file uploads
+  },
 };
 
-export async function postLegalReviewToBackend(opts: {
-    file: File;
-    role: 'sender' | 'recipient';
-    documentId?: string; // optional if you already created a Document row
-}): Promise<ReviewResponse> {
-    const { file, role, documentId } = opts;
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-    // v1 requires .txt (keep the guard client-side too)
-    if (!file.name.toLowerCase().endsWith('.txt')) {
-        throw new Error('Only .txt files are supported in v1.');
+  const form = formidable({
+  multiples: false,
+  uploadDir: "/tmp",         // or "./uploads"
+  keepExtensions: true,       // preserves .pdf/.docx/etc
+});
+
+  form.parse(req, async (err, fields, files) => {
+    try {
+      if (err || !files.file) {
+        console.error("Upload error:", err);
+        return res
+          .status(400)
+          .json({ error: "Failed to parse uploaded document" });
+      }
+
+      const file = files.file as formidable.File;
+      const filepath = file.filepath;
+      const mimetype = file.mimetype || "";
+      const originalName = file.originalFilename || "";
+
+      let text = "";
+
+      if (mimetype === "application/pdf" || originalName.endsWith(".pdf")) {
+        // PDF parsing requires optional dependency `pdf-parse` which may not be
+        // installed in this environment. Return an instructive error so the
+        // caller can upload a TXT/DOCX or install the optional dependency.
+        return res.status(501).json({ error: 'PDF extraction requires optional dependency "pdf-parse". Please install it on the server or upload a TXT/DOCX file.' });
+      } else if (
+        mimetype ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        originalName.endsWith(".docx")
+      ) {
+        // DOCX parsing requires optional dependency `mammoth` which may not be
+        // installed in this environment. Return an instructive error so the
+        // caller can upload a TXT/PDF or install the optional dependency.
+        return res.status(501).json({ error: 'DOCX extraction requires optional dependency "mammoth". Please install it on the server or upload a TXT/PDF file.' });
+      } else if (
+        mimetype === "text/plain" ||
+        originalName.endsWith(".txt") ||
+        !mimetype // fallback
+      ) {
+        // Plain text
+        text = fs.readFileSync(filepath, "utf-8");
+      } else {
+        return res.status(400).json({
+          error: "Unsupported file type. Please upload a TXT, PDF, or DOCX file.",
+        });
+      }
+
+      if (!text || text.trim().length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Unable to extract text from the document." });
+      }
+
+      const review = analyzeLegalDocument(text);
+      return res.status(200).json({ message: "Legal review complete", review });
+    } catch (error) {
+      console.error("Review error:", error);
+      return res.status(500).json({ error: "Failed to review document" });
     }
-
-    // Supabase session → access token
-    const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
-    if (sessErr) throw new Error(`Auth error: ${sessErr.message}`);
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) throw new Error('You must be logged in to run Legal Review.');
-
-    const form = new FormData();
-    form.append('document', file);      // FIELD NAME MUST BE 'document'
-    form.append('role', role);          // 'sender' | 'recipient'
-    if (documentId) form.append('documentId', documentId);
-
-    const res = await fetch(`${API_BASE}/api/review`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${accessToken}`, // backend will verify
-            // DO NOT set Content-Type; the browser sets multipart boundary for FormData
-        },
-        body: form,
-    });
-
-    // Helpful error surfacing for the UI
-    if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        const msg = text || `HTTP ${res.status}`;
-        throw new Error(msg);
-    }
-
-    return (await res.json()) as ReviewResponse;
+  });
 }

@@ -1,3 +1,40 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Compact form utilities for denser layouts (apply .compact-form to a wrapper) */
+.compact-form input,
+.compact-form select,
+.compact-form textarea,
+.compact-form button {
+	font-size: 12px;
+	line-height: 1.1;
+}
+
+.compact-form select {
+	padding: 4px 6px; /* smaller horizontal padding */
+	font-size: 12px;
+}
+
+.compact-form option {
+	padding: 0.15rem 0.4rem; /* some browsers honor this; reduces option spacing */
+	font-size: 12px;
+	line-height: 1.1;
+}
+
+/* reduce Edge/IE default expand icon padding */
+.compact-form select::-ms-expand {
+	display: none;
+}
+
+.compact-form label {
+	margin-bottom: 0.25rem;
+}
+
+.compact-form .space-y-4 > * + * {
+	margin-top: 0.5rem; /* reduce spacing between form elements */
+}
+
+.compact-form .rounded-md {
+	border-radius: 0.375rem;
+}

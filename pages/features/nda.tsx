@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import html2pdf from 'html2pdf.js';
 import ReviewResults from '../../components/ReviewResults';
 import apiClient from '../../lib/apiClient';
 
@@ -66,16 +65,24 @@ export default function NdaGeneratorPage() {
   const downloadAsPDF = () => {
     const element = document.getElementById('nda-preview');
     if (!element) return;
-
-    const opt = {
-      margin: 0.5,
-      filename: 'nda.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {},
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-    };
-
-    html2pdf().from(element).set(opt).save();
+    // load html2pdf only on the client when needed (avoid SSR issues)
+    (async () => {
+      try {
+        const mod = await import('html2pdf.js');
+        const html2pdf = (mod && (mod as any).default) || mod;
+        const opt = {
+          margin: 0.5,
+          filename: 'nda.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {},
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        };
+        html2pdf().from(element).set(opt).save();
+      } catch (err) {
+        console.error('Failed to load html2pdf:', err);
+        setError('PDF download is not available in this environment.');
+      }
+    })();
   };
 
   const downloadAsTXT = () => {
