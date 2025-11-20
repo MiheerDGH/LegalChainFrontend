@@ -163,14 +163,58 @@ export default function ContractCreationPage() {
     // Basic client-side validation using formValues and schema
     const key = (contractType || 'standard').toString().toUpperCase();
     const schema = (contractSchemas as any)[key] || (contractSchemas as any).STANDARD;
+    const isIpLicense = key === 'IP_LICENSE';
+    const isEmployment = key === 'EMPLOYMENT';
+    const isSales = key === 'SALES';
+    const isLease = key === 'LEASE';
+    const isSafe = key === 'SAFE';
 
-    const parties = (formValues.parties && Array.isArray(formValues.parties)) ? formValues.parties.filter(Boolean) : [partyA, partyB].filter(Boolean);
-    const minPartiesField = schema.fields?.find((f: any) => f.key === 'parties');
-    const minParties = minPartiesField?.min || 2;
-    if (parties.length < minParties) {
-      setError(`Please provide at least ${minParties} parties.`);
-      setLoading(false);
-      return;
+    // Party alias normalization (allow a single party; backend can insert placeholder for the other)
+    const getAlias = (keys: string[]) => {
+      for (const k of keys) {
+        const v = (formValues as any)[k];
+        if (typeof v === 'string' && v.trim()) return v.trim();
+      }
+      return undefined;
+    };
+    // Alias mapping: ensure Investor -> Party A, Company -> Party B for SAFE; Buyer/Seller; Landlord/Tenant; Licensor/Licensee; Employer/Employee
+    let aliasA = getAlias(['partyA','investor','licensor','assignor','issuer','company','employer','buyer','landlord']);
+    let aliasB = getAlias(['partyB','company','licensee','assignee','holder','employee','seller','tenant']);
+    const partiesInput = (formValues.parties && Array.isArray(formValues.parties)) ? formValues.parties.filter(Boolean) : [partyA, partyB].filter(Boolean);
+    if (!aliasA && partiesInput[0]) aliasA = partiesInput[0];
+    if (!aliasB && partiesInput[1]) aliasB = partiesInput[1];
+    // (moved isEmployment earlier for effectiveDate validation)
+    let parties = Array.from(new Set([aliasA, aliasB, ...partiesInput].filter(Boolean)));
+    if (isIpLicense) {
+      // Backend requires both parties for IP transfers: Licensor -> partyA, Licensee -> partyB
+      if (!aliasA || !aliasB) {
+        setError('Please provide Licensor (Party A) and Licensee (Party B).');
+        setLoading(false);
+        return;
+      }
+      parties = [aliasA, aliasB];
+    } else if (isEmployment) {
+      // Employment requires Employer and Employee
+      if (!aliasA || !aliasB) {
+        setError('Please provide Employer (Party A) and Employee (Party B).');
+        setLoading(false);
+        return;
+      }
+      parties = [aliasA, aliasB];
+    } else if (isSafe) {
+      // SAFE requires Investor and Company
+      if (!aliasA || !aliasB) {
+        setError('Please provide Investor (Party A) and Company (Party B).');
+        setLoading(false);
+        return;
+      }
+      parties = [aliasA, aliasB];
+    } else {
+      if (parties.length < 1) {
+        setError('Please provide at least one party.');
+        setLoading(false);
+        return;
+      }
     }
 
     const rawClauses = (formValues.clauses && Array.isArray(formValues.clauses)) ? formValues.clauses : clauses;
@@ -200,10 +244,19 @@ export default function ContractCreationPage() {
     }
 
     // NEW: Allow empty clauses; only validate required base fields
-    const effective = formValues.effectiveDate || effectiveDate;
+    // Allow leaseStart to serve as effectiveDate fallback for LEASE if user didn't fill effectiveDate explicitly
+    let effective = formValues.effectiveDate || effectiveDate;
+    if (!effective && isLease && formValues.leaseStart) {
+      effective = formValues.leaseStart;
+    }
     const juris = formValues.jurisdiction || jurisdiction;
-    if (!effective || !juris || !contractType || parties.length < minParties) {
-      setError('Please fill Party A, Party B, Effective Date, Jurisdiction and Contract Type.');
+    // For IP License, Employment, Sales, Lease & SAFE: effectiveDate (or leaseStart fallback) is required; others: only type, jurisdiction, and at least one party
+    if (!juris || !contractType || ((isIpLicense || isEmployment || isSales || isLease || isSafe) && !effective) || (!isIpLicense && !isEmployment && !isSales && !isLease && !isSafe && parties.length < 1)) {
+      if ((isIpLicense || isEmployment || isSales || isLease || isSafe) && !effective) {
+        setError('Please provide contract type, jurisdiction, and an effective date.');
+      } else {
+        setError('Please provide contract type, jurisdiction, and at least one party.');
+      }
       setLoading(false);
       return;
     }
@@ -243,8 +296,8 @@ export default function ContractCreationPage() {
       }
       const payload = {
         type: contractType.toUpperCase(),
-        partyA: parties[0] || '',
-        partyB: parties[1] || '',
+        partyA: (isIpLicense || isEmployment || isSafe) ? aliasA : (aliasA || parties[0] || ''),
+        partyB: (isIpLicense || isEmployment || isSafe) ? aliasB : (aliasB || parties[1] || ''),
         parties,
         jurisdiction: juris,
         effectiveDate: effective,
@@ -257,7 +310,7 @@ export default function ContractCreationPage() {
         setLastRequestPayload(payload);
         // When in debug mode, ask backend to return debugFields (either via query or body)
         const path = showDebug ? '/api/ai/generateContract?debug=true' : '/api/ai/generateContract';
-        const payloadToSend = { ...payload, ...(showDebug ? { _debug: true } : {}) };
+        const payloadToSend = { ...payload, ...(showDebug ? { _debug: true, debugFields: true } : {}) };
         const result = await apiClient.post(path, payloadToSend, { headers: { Authorization: `Bearer ${token}` } });
         const responseData = result.data || {};
         // capture debugFields if backend returned them (helpful to iterate on form)

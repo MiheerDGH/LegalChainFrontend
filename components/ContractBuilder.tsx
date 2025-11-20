@@ -28,7 +28,13 @@ export default function ContractBuilder() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  // Flag state (exposed for downstream components if needed later)
+  const [usedFallback, setUsedFallback] = useState<boolean>(false);
+  const [openAIUsed, setOpenAIUsed] = useState<boolean>(false);
+  const [isHtml, setIsHtml] = useState<boolean>(false);
+  const [hallucinationWarning, setHallucinationWarning] = useState<boolean>(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   useEffect(() => {
     // Prefer local schemas shipped in src/config/contractSchemas.js (from product sheet).
@@ -114,14 +120,22 @@ export default function ContractBuilder() {
   const updateClause = (idx: number, val: string) => setClauses(prev => { const next = [...prev]; next[idx] = val; return next; });
 
   const normalizeResponse = (resp: any) => {
-    // backend may send different shapes; normalize to { html, text, warnings[], hallucinationWarning, references[] }
+    // Normalize backend shape to a unified object
     if (!resp) return null;
+    const html = resp.html || (resp.isHtml ? resp.contractText || resp.contract : null) || null;
+    const text = resp.text || (!resp.isHtml ? resp.contractText || resp.contract : null) || null;
+    const warnings = Array.isArray(resp.warnings) ? resp.warnings : [];
+    const hallucination = !!resp.hallucinationWarning;
+    const references = resp.references || resp.authority_and_references || [];
     return {
-      html: resp.html || (resp.isHtml ? resp.contractText || resp.contract : null) || null,
-      text: resp.text || (!resp.isHtml ? resp.contractText || resp.contract : null) || null,
-      warnings: Array.isArray(resp.warnings) ? resp.warnings : [],
-      hallucinationWarning: !!resp.hallucinationWarning,
-      references: resp.references || resp.authority_and_references || [],
+      html,
+      text,
+      warnings,
+      hallucinationWarning: hallucination,
+      references,
+      isHtml: !!resp.isHtml || !!html,
+      usedFallback: !!resp.usedFallback,
+      openAIUsed: resp.openAIUsed !== undefined ? !!resp.openAIUsed : !resp.usedFallback,
       raw: resp,
     };
   };
@@ -129,12 +143,48 @@ export default function ContractBuilder() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
-    // basic validation
-    const goodParties = parties.map(p => (p || '').trim()).filter(Boolean);
-    if (goodParties.length < 2) {
-      setError('Please provide at least two parties.');
+
+    // Party alias normalization (single party allowed; backend will insert placeholder for missing side)
+    const partyAAliases = ['partyA','investor','licensor','assignor','issuer','company','employer','buyer','landlord'];
+    const partyBAliases = ['partyB','company','licensee','assignee','holder','employee','seller','tenant'];
+    const isEmployment = String(selectedType || '').toUpperCase() === 'EMPLOYMENT';
+    const explicitParties = parties.map(p => (p || '').trim()).filter(Boolean);
+    const isIpLicense = String(selectedType || '').toUpperCase() === 'IP_LICENSE';
+
+    const aliasValue = (aliases: string[]): string | undefined => {
+      for (const a of aliases) {
+        const v = (formValues as any)[a];
+        if (typeof v === 'string' && v.trim()) return v.trim();
+      }
+      return undefined;
+    };
+
+    let partyA = aliasValue(partyAAliases);
+    let partyB = aliasValue(partyBAliases);
+
+    // Map generic Parties input into canonical slots if aliases missing
+    if (explicitParties.length > 0) {
+      if (!partyA) partyA = explicitParties[0];
+      if (explicitParties.length > 1 && !partyB) partyB = explicitParties[1];
+    }
+
+    // Require at least one party alias/entry unless IP License (zero allowed)
+    const isSafe = String(selectedType || '').toUpperCase() === 'SAFE';
+    if (!isIpLicense && !isEmployment && !isSafe && !partyA && !partyB) {
+      setError('Please provide at least one party (e.g., Licensor, Licensee, Company, Investor).');
       return;
     }
+
+    const dedupParties = Array.from(new Set([partyA, partyB].filter(Boolean))) as string[];
+    if (isEmployment && (!partyA || !partyB)) {
+      setError('Please provide Employer (Party A) and Employee (Party B).');
+      return;
+    }
+    if (isSafe && (!partyA || !partyB)) {
+      setError('Please provide Investor (Party A) and Company (Party B).');
+      return;
+    }
+
     const goodClauses = clauses.map(c => (c || '').trim()).filter(Boolean);
     if (goodClauses.length === 0) {
       setError('Please add at least one clause.');
@@ -143,11 +193,15 @@ export default function ContractBuilder() {
 
     const payload: Record<string, any> = {
       type: selectedType,
-      parties: goodParties,
+      parties: dedupParties,
+      partyA: partyA,
+      partyB: partyB,
       clauses: goodClauses.map((c: string) => ({ id: null, text: c })),
       jurisdiction: formValues.jurisdiction || formValues.governingLaw || '',
       effectiveDate: formValues.effectiveDate || undefined,
     };
+
+    if (debugMode) payload.debugFields = true;
 
     // attach per-type fields
     for (const f of fieldsMeta) {
@@ -160,6 +214,11 @@ export default function ContractBuilder() {
       const resp = await api.generate(payload);
       const normalized = normalizeResponse(resp);
       setResult(normalized);
+      // Update flag state for badges / downstream usage
+      setUsedFallback(!!normalized?.usedFallback);
+      setOpenAIUsed(!!normalized?.openAIUsed);
+      setIsHtml(!!normalized?.isHtml);
+      setHallucinationWarning(!!normalized?.hallucinationWarning);
     } catch (err: any) {
       setError(String(err?.message || err));
     } finally {
@@ -321,11 +380,26 @@ export default function ContractBuilder() {
           <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">{loading ? 'Generating...' : 'Generate Contract'}</button>
           <button type="button" onClick={() => { setFormValues({}); setParties(['', '']); setClauses(['']); setResult(null); setError(null); }} className="px-3 py-2 border rounded">Reset</button>
           <label className="ml-auto flex items-center gap-2 text-sm"><input type="checkbox" checked={showAdvanced} onChange={() => setShowAdvanced(v => !v)} /> Show advanced fields</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={debugMode} onChange={() => setDebugMode(v => !v)} /> Debug</label>
         </div>
       </form>
 
       {/* results */}
       <div className="mt-6">
+        {/* Badge row */}
+        {(usedFallback || openAIUsed || hallucinationWarning) && (
+          <div className="flex flex-wrap gap-2 mb-3" aria-label="generation-flags">
+            {openAIUsed && !usedFallback && (
+              <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white" title="Draft generated via AI model">AI Draft</span>
+            )}
+            {usedFallback && (
+              <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-amber-500 text-white" title="Fallback deterministic formatter used">Fallback Draft</span>
+            )}
+            {hallucinationWarning && (
+              <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-yellow-600 text-white" title="Some provided clause snippets not found verbatim">Hallucination Risk</span>
+            )}
+          </div>
+        )}
         {result?.hallucinationWarning && <div className="p-3 bg-yellow-100 text-yellow-800 rounded mb-3">Warning: The generated contract may contain hallucinated references or content. Review carefully.</div>}
         {Array.isArray(result?.warnings) && result.warnings.length > 0 && (
           <div className="mb-3">
@@ -336,7 +410,7 @@ export default function ContractBuilder() {
           </div>
         )}
 
-        {result?.html ? (
+        {result?.html && isHtml ? (
           <div id="contract-preview" className="prose max-w-none">
             {/* sanitize */}
             {typeof window !== 'undefined' && createDOMPurify ? (
