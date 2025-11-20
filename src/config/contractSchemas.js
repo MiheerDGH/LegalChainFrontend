@@ -1,7 +1,7 @@
 export const contractSchemas = {
   STANDARD: {
     key: 'STANDARD',
-    label: 'Starting Contract',
+    label: 'Standard Contract',
     description: 'Generic contract with clauses, parties, governing law, and signatures.',
     fields: [
       { key: 'title', label: 'Title', type: 'text', placeholder: 'Agreement Title (optional)', optional: true },
