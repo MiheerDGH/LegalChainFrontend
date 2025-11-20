@@ -41,7 +41,7 @@ export default function ContractBuilder() {
     try {
   // Include canonical contract types: STANDARD, SERVICE, NDA, EMPLOYMENT, SALES, LEASE,
   // and additional investment/IP types: SAFE, EQUITY, IP_LICENSE
-  const allowed = ['STANDARD', 'SERVICE', 'NDA', 'EMPLOYMENT', 'SALES', 'LEASE', 'SAFE', 'EQUITY', 'IP_LICENSE'];
+  const allowed = ['STANDARD', 'SERVICE', 'NDA', 'EMPLOYMENT', 'SALES', 'LEASE', 'SAFE', 'EQUITY', 'IP_LICENSE', 'PARTNERSHIP'];
       const local = Object.values(contractSchemas || {})
         .map((s: any) => ({ key: s.key, displayName: s.label || s.key }))
         .filter((t: any) => allowed.includes(String(t.key).toUpperCase()));
@@ -148,6 +148,7 @@ export default function ContractBuilder() {
     const partyAAliases = ['partyA','investor','licensor','assignor','issuer','company','employer','buyer','landlord'];
     const partyBAliases = ['partyB','company','licensee','assignee','holder','employee','seller','tenant'];
     const isEmployment = String(selectedType || '').toUpperCase() === 'EMPLOYMENT';
+    const isPartnership = String(selectedType || '').toUpperCase() === 'PARTNERSHIP';
     const explicitParties = parties.map(p => (p || '').trim()).filter(Boolean);
     const isIpLicense = String(selectedType || '').toUpperCase() === 'IP_LICENSE';
 
@@ -170,7 +171,7 @@ export default function ContractBuilder() {
 
     // Require at least one party alias/entry unless IP License (zero allowed)
     const isSafe = String(selectedType || '').toUpperCase() === 'SAFE';
-    if (!isIpLicense && !isEmployment && !isSafe && !partyA && !partyB) {
+    if (!isIpLicense && !isEmployment && !isSafe && !isPartnership && !partyA && !partyB) {
       setError('Please provide at least one party (e.g., Licensor, Licensee, Company, Investor).');
       return;
     }
@@ -183,6 +184,16 @@ export default function ContractBuilder() {
     if (isSafe && (!partyA || !partyB)) {
       setError('Please provide Investor (Party A) and Company (Party B).');
       return;
+    }
+    if (isPartnership) {
+      // Derive from partners list if not set
+      const partnersArr = Array.isArray(formValues.partners) ? formValues.partners.filter((p: any) => p && String(p).trim()) : [];
+      if (!partyA && partnersArr[0]) partyA = partnersArr[0].trim();
+      if (!partyB && partnersArr[1]) partyB = partnersArr[1].trim();
+      if (!partyA || !partyB) {
+        setError('Please provide at least two partners (Party A and Party B).');
+        return;
+      }
     }
 
     const goodClauses = clauses.map(c => (c || '').trim()).filter(Boolean);

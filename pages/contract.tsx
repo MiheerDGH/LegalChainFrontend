@@ -168,6 +168,8 @@ export default function ContractCreationPage() {
     const isSales = key === 'SALES';
     const isLease = key === 'LEASE';
     const isSafe = key === 'SAFE';
+    const isEquity = key === 'EQUITY';
+    const isPartnership = key === 'PARTNERSHIP';
 
     // Party alias normalization (allow a single party; backend can insert placeholder for the other)
     const getAlias = (keys: string[]) => {
@@ -185,6 +187,14 @@ export default function ContractCreationPage() {
     if (!aliasB && partiesInput[1]) aliasB = partiesInput[1];
     // (moved isEmployment earlier for effectiveDate validation)
     let parties = Array.from(new Set([aliasA, aliasB, ...partiesInput].filter(Boolean)));
+
+    // Partnership: derive parties from partners repeatable list if provided
+    if (isPartnership) {
+      const partnersArr = Array.isArray(formValues.partners) ? formValues.partners.filter((p: any) => p && String(p).trim()) : [];
+      if (!aliasA && partnersArr[0]) aliasA = String(partnersArr[0]).trim();
+      if (!aliasB && partnersArr[1]) aliasB = String(partnersArr[1]).trim();
+      parties = Array.from(new Set([aliasA, aliasB, ...partnersArr].filter(Boolean)));
+    }
     if (isIpLicense) {
       // Backend requires both parties for IP transfers: Licensor -> partyA, Licensee -> partyB
       if (!aliasA || !aliasB) {
@@ -209,6 +219,13 @@ export default function ContractCreationPage() {
         return;
       }
       parties = [aliasA, aliasB];
+    } else if (isPartnership) {
+      // Partnership requires at least two partners (Party A/B)
+      if (parties.length < 2) {
+        setError('Please provide at least two partners.');
+        setLoading(false);
+        return;
+      }
     } else {
       if (parties.length < 1) {
         setError('Please provide at least one party.');
@@ -244,15 +261,14 @@ export default function ContractCreationPage() {
     }
 
     // NEW: Allow empty clauses; only validate required base fields
-    // Allow leaseStart to serve as effectiveDate fallback for LEASE if user didn't fill effectiveDate explicitly
+    // Allow leaseStart (LEASE) or closingDate (EQUITY) to serve as effectiveDate fallback if explicit effectiveDate missing
     let effective = formValues.effectiveDate || effectiveDate;
-    if (!effective && isLease && formValues.leaseStart) {
-      effective = formValues.leaseStart;
-    }
+    if (!effective && isLease && formValues.leaseStart) effective = formValues.leaseStart;
+    if (!effective && isEquity && formValues.closingDate) effective = formValues.closingDate;
     const juris = formValues.jurisdiction || jurisdiction;
-    // For IP License, Employment, Sales, Lease & SAFE: effectiveDate (or leaseStart fallback) is required; others: only type, jurisdiction, and at least one party
-    if (!juris || !contractType || ((isIpLicense || isEmployment || isSales || isLease || isSafe) && !effective) || (!isIpLicense && !isEmployment && !isSales && !isLease && !isSafe && parties.length < 1)) {
-      if ((isIpLicense || isEmployment || isSales || isLease || isSafe) && !effective) {
+    // For IP License, Employment, Sales, Lease, SAFE & Equity: effectiveDate (with fallbacks) is required; others: only type, jurisdiction, and at least one party
+    if (!juris || !contractType || ((isIpLicense || isEmployment || isSales || isLease || isSafe || isEquity || isPartnership) && !effective) || (!isIpLicense && !isEmployment && !isSales && !isLease && !isSafe && !isEquity && !isPartnership && parties.length < 1)) {
+      if ((isIpLicense || isEmployment || isSales || isLease || isSafe || isEquity || isPartnership) && !effective) {
         setError('Please provide contract type, jurisdiction, and an effective date.');
       } else {
         setError('Please provide contract type, jurisdiction, and at least one party.');
@@ -296,8 +312,8 @@ export default function ContractCreationPage() {
       }
       const payload = {
         type: contractType.toUpperCase(),
-        partyA: (isIpLicense || isEmployment || isSafe) ? aliasA : (aliasA || parties[0] || ''),
-        partyB: (isIpLicense || isEmployment || isSafe) ? aliasB : (aliasB || parties[1] || ''),
+        partyA: (isIpLicense || isEmployment || isSafe || isEquity || isPartnership) ? aliasA : (aliasA || parties[0] || ''),
+        partyB: (isIpLicense || isEmployment || isSafe || isEquity || isPartnership) ? aliasB : (aliasB || parties[1] || ''),
         parties,
         jurisdiction: juris,
         effectiveDate: effective,
