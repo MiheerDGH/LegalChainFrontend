@@ -1,35 +1,28 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "ES2020",                  // was ES2017 — Node 18 comfortably supports ES2020+
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": false,                     // fine to keep off for now
+    "strictNullChecks": true,            // you already had this on; it still applies even with strict:false
     "noEmit": true,
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node",          // OK; you can switch to "bundler" later if you adopt more ESM-only deps
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    //Add these two lines below
+
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "strictNullChecks": true
+
+    "types": ["node"],                   // ✅ add this so Buffer/stream types work in API routes
+
+    "plugins": [{ "name": "next" }]
   },
   "include": [
     "**/*.ts",
@@ -37,7 +30,5 @@
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

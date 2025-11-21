@@ -1,57 +1,65 @@
-// frontend/pages/features/legal-review.tsx (or your path)
+// pages/features/legal-review.tsx
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import ReviewResults from '../../components/ReviewResults';
-import apiClient from '../../lib/apiClient';
 
 export default function LegalReviewPage() {
     const [file, setFile] = useState<File | null>(null);
     const [role, setRole] = useState<'sender' | 'recipient' | ''>('');
     const [loading, setLoading] = useState(false);
-    const [reviewResult, setReviewResult] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
+    const [reviewPayload, setReviewPayload] = useState<any>(null);
+
     const router = useRouter();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0] || null;
-        setFile(f);
         setError(null);
-        if (f && f.type !== 'text/plain' && !f.name.toLowerCase().endsWith('.txt')) {
-            setError('Please upload a .txt file for v1.');
-            setFile(null);
-        }
+        setFile(f);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setMessage(null);
+        setReviewPayload(null);
 
         if (!file || !role) {
-            setError('Please choose a role and a .txt document.');
+            setError('Please choose a role and a document (.txt, .pdf, or .docx).');
             return;
         }
 
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+        setLoading(true);
+        try {
+            // 1) Upload to get documentId
+            const fd = new FormData();
+            fd.set('document', file); // IMPORTANT: backend expects 'document'
+            const up = await fetch('/api/docs/upload', { method: 'POST', body: fd });
+            const upJson = await up.json();
+            if (!up.ok) throw new Error(upJson?.error || 'Upload failed');
+            const documentId = upJson?.documentId || upJson?.id; // support either key
 
-      try {
-        const result = await apiClient.post('/api/ai/legalReview', formData);
-        const data = result.data;
-        setReviewResult(data?.analysis || 'No analysis returned.');
-        setMessage('Legal review complete!');
-      } catch (err) {
-        setError('Failed to run legal review. Please try again.');
-      }
-    } catch (err) {
-      setError('Error running legal review. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+            if (!documentId) throw new Error('Upload response missing documentId');
+
+            // 2) Run review (use sidecar text saved by the upload)
+            const r = await fetch('/api/ai/legalReview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentId, role }),
+            });
+            const reviewJson = await r.json();
+            if (!r.ok) throw new Error(reviewJson?.error || 'Review failed');
+
+            setReviewPayload(reviewJson);
+            setMessage('Legal review complete!');
+        } catch (err: any) {
+            console.error('[FE] legal review flow error:', err?.message || err);
+            setError('Failed to run legal review. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-6 flex items-center justify-center">
@@ -83,11 +91,11 @@ export default function LegalReviewPage() {
                     </div>
 
                     <div>
-                        <label className="block font-medium mb-2" htmlFor="file-upload">Upload Document (.txt only)</label>
+                        <label className="block font-medium mb-2" htmlFor="file-upload">Upload Document (.txt, .pdf, .docx)</label>
                         <input
                             id="file-upload"
                             type="file"
-                            accept=".txt,text/plain"
+                            accept=".txt,text/plain,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
                             onChange={handleFileChange}
                             required
                             className="w-full border p-2 rounded"
@@ -103,10 +111,11 @@ export default function LegalReviewPage() {
                     </button>
                 </form>
 
-        {reviewResult && (
-          <ReviewResults results={reviewResult} className="mt-6 border-t pt-4" />
-        )}
-      </div>
-    </div>
-  );
+                {reviewPayload && (
+                    // If your <ReviewResults/> expects a string, send JSON.stringify(reviewPayload, null, 2)
+                    <ReviewResults results={reviewPayload} className="mt-6 border-t pt-4" />
+                )}
+            </div>
+        </div>
+    );
 }
