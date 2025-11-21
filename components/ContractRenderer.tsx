@@ -31,10 +31,20 @@ export default function ContractRenderer({
   contract,
   structure = [],
   references = [],
+  usedFallback = false,
+  openAIUsed = false,
+  hallucinationWarning = false,
+  isHtml,
+  warnings = [],
 }: {
   contract: string;
   structure?: Section[];
   references?: Reference[];
+  usedFallback?: boolean;
+  openAIUsed?: boolean;
+  hallucinationWarning?: boolean;
+  isHtml?: boolean;
+  warnings?: string[];
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,6 +69,21 @@ export default function ContractRenderer({
 
   return (
     <div className="text-black">
+      {/* Flag badges */}
+      {(usedFallback || openAIUsed || hallucinationWarning) && (
+        <div className="flex flex-wrap gap-2 mb-4" aria-label="generation-flags">
+          {openAIUsed && !usedFallback && (
+            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-blue-600 text-white" title="Draft generated via AI model">AI Draft</span>
+          )}
+          {usedFallback && (
+            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-amber-500 text-white" title="Fallback deterministic formatter used">Fallback Draft</span>
+          )}
+          {hallucinationWarning && (
+            <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-yellow-600 text-white" title="Some provided clause snippets not found verbatim">Hallucination Risk</span>
+          )}
+        </div>
+      )}
+
       {structure.length > 0 && (
         <div className="mb-6">
           <h3 className="font-bold text-lg mb-2">Table of Contents</h3>
@@ -77,8 +102,22 @@ export default function ContractRenderer({
         </div>
       )}
 
+      {hallucinationWarning && (
+        <div className="p-3 bg-yellow-100 text-yellow-800 rounded mb-4 text-sm" role="alert">
+          Warning: Generated content may contain hallucinated references. Review carefully.
+        </div>
+      )}
+      {Array.isArray(warnings) && warnings.length > 0 && (
+        <div className="mb-4 text-sm" aria-label="warnings-list">
+          <strong>Warnings:</strong>
+          <ul className="list-disc ml-5">
+            {warnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      )}
+
       <div ref={containerRef} className="prose max-w-none">
-        {looksLikeHtml(contract) ? (
+        {(isHtml || looksLikeHtml(contract)) ? (
           // Minimal sanitization; backend should provide safe HTML when possible
           <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(contract) }} />
         ) : (

@@ -1,7 +1,7 @@
 export const contractSchemas = {
   STANDARD: {
     key: 'STANDARD',
-    label: 'Starting Contract',
+    label: 'Standard Contract',
     description: 'Generic contract with clauses, parties, governing law, and signatures.',
     fields: [
       { key: 'title', label: 'Title', type: 'text', placeholder: 'Agreement Title (optional)', optional: true },
@@ -79,6 +79,7 @@ export const contractSchemas = {
     fields: [
       { key: 'employer', label: 'Employer (Company)', type: 'text' },
       { key: 'employee', label: 'Employee', type: 'text' },
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'jobTitle', label: 'Job Title', type: 'text' },
       { key: 'duties', label: 'Duties & Responsibilities', type: 'textarea', placeholder: 'Describe primary duties and reporting line' },
       { key: 'reportingLine', label: 'Reporting Line', type: 'text', optional: true },
@@ -113,6 +114,7 @@ export const contractSchemas = {
     fields: [
       { key: 'landlord', label: 'Landlord', type: 'text' },
       { key: 'tenant', label: 'Tenant', type: 'text' },
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
 
       // i. Exact Property Description
       { key: 'propertyAddress', label: 'Property Address', type: 'address', placeholder: 'Full street address' },
@@ -162,6 +164,7 @@ export const contractSchemas = {
     key: 'PARTNERSHIP',
     label: 'Partnership Agreement',
     fields: [
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'partners', label: 'Partners', type: 'repeatable', itemType: 'text', min: 2 },
       { key: 'capitalContributions', label: 'Capital Contributions', type: 'textarea' },
       { key: 'profitSharing', label: 'Profit / Loss Sharing', type: 'text' },
@@ -176,6 +179,7 @@ export const contractSchemas = {
     fields: [
       { key: 'licensor', label: 'Licensor', type: 'text' },
       { key: 'licensee', label: 'Licensee', type: 'text' },
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'scopeOfLicense', label: 'Scope of License', type: 'textarea' },
       { key: 'exclusivity', label: 'Exclusive / Non-exclusive', type: 'select', options: ['Exclusive', 'Non-exclusive'], optional: true },
       { key: 'territory', label: 'Territory', type: 'text', optional: true },
@@ -191,6 +195,7 @@ export const contractSchemas = {
     fields: [
       { key: 'investor', label: 'Investor', type: 'text' },
       { key: 'company', label: 'Company', type: 'text' },
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'investmentAmount', label: 'Investment Amount', type: 'currency' },
       { key: 'valuationCap', label: 'Valuation Cap', type: 'text', optional: true },
       { key: 'discountRate', label: 'Discount Rate', type: 'text', optional: true, placeholder: 'e.g., 20%'},
@@ -208,6 +213,7 @@ export const contractSchemas = {
     label: 'Equity Agreements',
     description: 'Purchase of equity securities: purchase price, number of shares, representations, vesting and transfer restrictions.',
     fields: [
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'buyer', label: 'Buyer', type: 'text' },
       { key: 'seller', label: 'Seller', type: 'text' },
       { key: 'shareClass', label: 'Share Class', type: 'text', optional: true },
@@ -228,6 +234,7 @@ export const contractSchemas = {
     fields: [
       { key: 'buyer', label: 'Buyer', type: 'text' },
       { key: 'seller', label: 'Seller', type: 'text' },
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
 
       // i. Products Description & Specifications
       { key: 'goodsDescription', label: 'Goods / Products Description', type: 'textarea', placeholder: 'High-level description of the goods or products' },

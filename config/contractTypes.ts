@@ -1,5 +1,5 @@
 const contractTypes = [
-  { value: 'standard', label: 'Starting Contract' },
+  { value: 'standard', label: 'Standard Contract' },
   { value: 'service', label: 'Services Agreement' },
   { value: 'nda', label: 'Non-Disclosure Agreement (NDA)' },
   { value: 'employment', label: 'Employment Agreement' },

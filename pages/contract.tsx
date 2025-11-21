@@ -30,6 +30,7 @@ export default function ContractCreationPage() {
   const [structure, setStructure] = useState([]);
   const [hallucinationWarning, setHallucinationWarning] = useState<boolean>(false);
   const [warningsList, setWarningsList] = useState<string[]>([]);
+  const [defaultClauseUsed, setDefaultClauseUsed] = useState<boolean>(false);
   // Attempt to refresh contract types from backend; fall back to local list and
   // always include any extra schemas discovered in `contractSchemas`.
   const [remoteTypes, setRemoteTypes] = useState<any[] | null>(null);
@@ -88,6 +89,11 @@ export default function ContractCreationPage() {
       if (seen.has(it.value)) continue;
       seen.add(it.value);
       combined.push({ value: it.value, label: it.label || it.value });
+    }
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        console.debug('[Contract] mergedTypes', combined);
+      } catch {}
     }
     return combined;
   }, [remoteTypes]);
@@ -157,14 +163,75 @@ export default function ContractCreationPage() {
     // Basic client-side validation using formValues and schema
     const key = (contractType || 'standard').toString().toUpperCase();
     const schema = (contractSchemas as any)[key] || (contractSchemas as any).STANDARD;
+    const isIpLicense = key === 'IP_LICENSE';
+    const isEmployment = key === 'EMPLOYMENT';
+    const isSales = key === 'SALES';
+    const isLease = key === 'LEASE';
+    const isSafe = key === 'SAFE';
+    const isEquity = key === 'EQUITY';
+    const isPartnership = key === 'PARTNERSHIP';
 
-    const parties = (formValues.parties && Array.isArray(formValues.parties)) ? formValues.parties.filter(Boolean) : [partyA, partyB].filter(Boolean);
-    const minPartiesField = schema.fields?.find((f: any) => f.key === 'parties');
-    const minParties = minPartiesField?.min || 2;
-    if (parties.length < minParties) {
-      setError(`Please provide at least ${minParties} parties.`);
-      setLoading(false);
-      return;
+    // Party alias normalization (allow a single party; backend can insert placeholder for the other)
+    const getAlias = (keys: string[]) => {
+      for (const k of keys) {
+        const v = (formValues as any)[k];
+        if (typeof v === 'string' && v.trim()) return v.trim();
+      }
+      return undefined;
+    };
+    // Alias mapping: ensure Investor -> Party A, Company -> Party B for SAFE; Buyer/Seller; Landlord/Tenant; Licensor/Licensee; Employer/Employee
+    let aliasA = getAlias(['partyA','investor','licensor','assignor','issuer','company','employer','buyer','landlord']);
+    let aliasB = getAlias(['partyB','company','licensee','assignee','holder','employee','seller','tenant']);
+    const partiesInput = (formValues.parties && Array.isArray(formValues.parties)) ? formValues.parties.filter(Boolean) : [partyA, partyB].filter(Boolean);
+    if (!aliasA && partiesInput[0]) aliasA = partiesInput[0];
+    if (!aliasB && partiesInput[1]) aliasB = partiesInput[1];
+    // (moved isEmployment earlier for effectiveDate validation)
+    let parties = Array.from(new Set([aliasA, aliasB, ...partiesInput].filter(Boolean)));
+
+    // Partnership: derive parties from partners repeatable list if provided
+    if (isPartnership) {
+      const partnersArr = Array.isArray(formValues.partners) ? formValues.partners.filter((p: any) => p && String(p).trim()) : [];
+      if (!aliasA && partnersArr[0]) aliasA = String(partnersArr[0]).trim();
+      if (!aliasB && partnersArr[1]) aliasB = String(partnersArr[1]).trim();
+      parties = Array.from(new Set([aliasA, aliasB, ...partnersArr].filter(Boolean)));
+    }
+    if (isIpLicense) {
+      // Backend requires both parties for IP transfers: Licensor -> partyA, Licensee -> partyB
+      if (!aliasA || !aliasB) {
+        setError('Please provide Licensor (Party A) and Licensee (Party B).');
+        setLoading(false);
+        return;
+      }
+      parties = [aliasA, aliasB];
+    } else if (isEmployment) {
+      // Employment requires Employer and Employee
+      if (!aliasA || !aliasB) {
+        setError('Please provide Employer (Party A) and Employee (Party B).');
+        setLoading(false);
+        return;
+      }
+      parties = [aliasA, aliasB];
+    } else if (isSafe) {
+      // SAFE requires Investor and Company
+      if (!aliasA || !aliasB) {
+        setError('Please provide Investor (Party A) and Company (Party B).');
+        setLoading(false);
+        return;
+      }
+      parties = [aliasA, aliasB];
+    } else if (isPartnership) {
+      // Partnership requires at least two partners (Party A/B)
+      if (parties.length < 2) {
+        setError('Please provide at least two partners.');
+        setLoading(false);
+        return;
+      }
+    } else {
+      if (parties.length < 1) {
+        setError('Please provide at least one party.');
+        setLoading(false);
+        return;
+      }
     }
 
     const rawClauses = (formValues.clauses && Array.isArray(formValues.clauses)) ? formValues.clauses : clauses;
@@ -193,8 +260,19 @@ export default function ContractCreationPage() {
       }
     }
 
-    if (schemaHasClauses && clauseObjects.length === 0) {
-      setError('Please add at least one clause.');
+    // NEW: Allow empty clauses; only validate required base fields
+    // Allow leaseStart (LEASE) or closingDate (EQUITY) to serve as effectiveDate fallback if explicit effectiveDate missing
+    let effective = formValues.effectiveDate || effectiveDate;
+    if (!effective && isLease && formValues.leaseStart) effective = formValues.leaseStart;
+    if (!effective && isEquity && formValues.closingDate) effective = formValues.closingDate;
+    const juris = formValues.jurisdiction || jurisdiction;
+    // For IP License, Employment, Sales, Lease, SAFE & Equity: effectiveDate (with fallbacks) is required; others: only type, jurisdiction, and at least one party
+    if (!juris || !contractType || ((isIpLicense || isEmployment || isSales || isLease || isSafe || isEquity || isPartnership) && !effective) || (!isIpLicense && !isEmployment && !isSales && !isLease && !isSafe && !isEquity && !isPartnership && parties.length < 1)) {
+      if ((isIpLicense || isEmployment || isSales || isLease || isSafe || isEquity || isPartnership) && !effective) {
+        setError('Please provide contract type, jurisdiction, and an effective date.');
+      } else {
+        setError('Please provide contract type, jurisdiction, and at least one party.');
+      }
       setLoading(false);
       return;
     }
@@ -219,12 +297,28 @@ export default function ContractCreationPage() {
       }
 
       // Build payload matching backend expectations
+      // Collect extra (schema-specific) fields excluding base ones
+      const baseKeys = new Set(['parties','jurisdiction','effectiveDate','clauses']);
+      const extra: Record<string, any> = {};
+      for (const f of (schema.fields || [])) {
+        const k = f.key;
+        if (baseKeys.has(k)) continue;
+        const v = (formValues as any)[k];
+        if (Array.isArray(v)) {
+          if (v.filter(Boolean).length) extra[k] = v.filter(Boolean);
+        } else if (v !== undefined && v !== '') {
+          extra[k] = v;
+        }
+      }
       const payload = {
-        type: contractType || 'service',
+        type: contractType.toUpperCase(),
+        partyA: (isIpLicense || isEmployment || isSafe || isEquity || isPartnership) ? aliasA : (aliasA || parties[0] || ''),
+        partyB: (isIpLicense || isEmployment || isSafe || isEquity || isPartnership) ? aliasB : (aliasB || parties[1] || ''),
         parties,
-        jurisdiction: formValues.jurisdiction || jurisdiction,
-        effectiveDate: formValues.effectiveDate || effectiveDate || undefined,
-        clauses: clauseObjects,
+        jurisdiction: juris,
+        effectiveDate: effective,
+        clauses: clauseObjects, // may be empty, backend can inject defaults
+        extra,
         clauseKeywords: makeClauseKeywords(rawClauses || []),
       };
 
@@ -232,7 +326,7 @@ export default function ContractCreationPage() {
         setLastRequestPayload(payload);
         // When in debug mode, ask backend to return debugFields (either via query or body)
         const path = showDebug ? '/api/ai/generateContract?debug=true' : '/api/ai/generateContract';
-        const payloadToSend = { ...payload, ...(showDebug ? { _debug: true } : {}) };
+        const payloadToSend = { ...payload, ...(showDebug ? { _debug: true, debugFields: true } : {}) };
         const result = await apiClient.post(path, payloadToSend, { headers: { Authorization: `Bearer ${token}` } });
         const responseData = result.data || {};
         // capture debugFields if backend returned them (helpful to iterate on form)
@@ -250,6 +344,8 @@ export default function ContractCreationPage() {
           setStructure((responseData.structure || []) as any);
           setHallucinationWarning(Boolean(normalized.hallucinationWarning));
           setWarningsList(Array.isArray(normalized.warnings) ? normalized.warnings : []);
+          const usedDefaults = Boolean((responseData.structure && responseData.structure.extra && responseData.structure.extra._usedDefaultClauses) || (normalized.warnings || []).some((w: string) => /default clause templates were used/i.test(w)));
+          setDefaultClauseUsed(usedDefaults);
         } else {
           // fallback to legacy fields
           setContract(responseData.contractText || responseData.contract || 'No contract generated.');
@@ -257,6 +353,8 @@ export default function ContractCreationPage() {
           setStructure(responseData.structure || []);
           setHallucinationWarning(Boolean(responseData.hallucinationWarning));
           setWarningsList(Array.isArray(responseData.warnings) ? responseData.warnings : []);
+          const usedDefaults = Boolean((responseData.structure && responseData.structure.extra && responseData.structure.extra._usedDefaultClauses) || (responseData.warnings || []).some((w: string) => /default clause templates were used/i.test(w)));
+          setDefaultClauseUsed(usedDefaults);
         }
       } catch (err: any) {
         // Prefer error.raw if available for debugging snippets
@@ -514,6 +612,31 @@ export default function ContractCreationPage() {
 
           {/* Use ContractRenderer for preview */}
           <div id="contract-preview">
+            {defaultClauseUsed && (
+              <div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 text-blue-800">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <strong>Info:</strong> No clauses provided — default clause templates were used to generate this contract. You can edit clauses below and regenerate if needed.
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // scroll to clauses textarea(s)
+                        const el = document.querySelector('textarea[placeholder*="clause"], textarea');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="text-xs underline"
+                    >Edit clauses</button>
+                    <button
+                      type="button"
+                      onClick={() => setContract('')}
+                      className="text-xs underline"
+                    >Clear preview</button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Warnings / hallucination banner */}
             {(hallucinationWarning || (warningsList && warningsList.length > 0)) && (
               <div className="mb-4 p-3 rounded bg-yellow-50 border border-yellow-200 text-yellow-800">
