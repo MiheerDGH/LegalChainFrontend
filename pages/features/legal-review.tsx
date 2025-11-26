@@ -2,6 +2,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import ReviewResults from '../../components/ReviewResults';
+import { createClient } from '@supabase/supabase-js';
+
+// ---- Supabase client (browser) ----
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// Call Render backend directly
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!; // e.g. https://legalchainbackend.onrender.com
 
 export default function LegalReviewPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -10,8 +20,47 @@ export default function LegalReviewPage() {
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [reviewPayload, setReviewPayload] = useState<any>(null);
-
     const router = useRouter();
+
+    // Prefer Supabase session; fallback to scanning localStorage
+    const getAccessToken = async (): Promise<string | null> => {
+        try {
+            const { data } = await supabase.auth.getSession();
+            if (data?.session?.access_token) return data.session.access_token;
+        } catch (_) {
+            /* ignore */
+        }
+
+        if (typeof window !== 'undefined') {
+            // Robust scan of localStorage for a JWT or JSON with access_token
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i)!;
+                const v = localStorage.getItem(k);
+                if (!v) continue;
+
+                // Direct JWT string?
+                if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(v)) return v;
+
+                // JSON containers used by various auth libs/Supabase
+                try {
+                    const o = JSON.parse(v);
+                    if (o?.access_token) return o.access_token;
+                    if (o?.token) return o.token;
+                    if (o?.currentSession?.access_token) return o.currentSession.access_token;
+                    if (o?.data?.session?.access_token) return o.data.session.access_token;
+                } catch {
+                    /* not JSON */
+                }
+            }
+        }
+        return null;
+    };
+
+    const buildAuthHeaders = async (): Promise<Record<string, string>> => {
+        const token = await getAccessToken();
+        if (!token) return {};
+        return { Authorization: `Bearer ${token}` };
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0] || null;
@@ -32,30 +81,39 @@ export default function LegalReviewPage() {
 
         setLoading(true);
         try {
+            const authHeaders = await buildAuthHeaders();
+            if (!authHeaders.Authorization) {
+                throw new Error('You are not logged in. Please log in to continue.');
+            }
+
             // 1) Upload to get documentId
             const fd = new FormData();
-            fd.set('document', file); // IMPORTANT: backend expects 'document'
-            const up = await fetch('/api/docs/upload', { method: 'POST', body: fd });
+            fd.set('document', file); // FIELD NAME MUST BE 'document'
+            const up = await fetch(`${API_BASE}/api/docs/upload`, {
+                method: 'POST',
+                headers: authHeaders,
+                body: fd,
+            });
             const upJson = await up.json();
-            if (!up.ok) throw new Error(upJson?.error || 'Upload failed');
-            const documentId = upJson?.documentId || upJson?.id; // support either key
+            if (!up.ok) throw new Error(upJson?.error || `Upload failed (${up.status})`);
 
+            const documentId = upJson?.documentId || upJson?.id;
             if (!documentId) throw new Error('Upload response missing documentId');
 
-            // 2) Run review (use sidecar text saved by the upload)
-            const r = await fetch('/api/ai/legalReview', {
+            // 2) Review by documentId (server reads text from DB/storage)
+            const r = await fetch(`${API_BASE}/api/docs/review`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders },
                 body: JSON.stringify({ documentId, role }),
             });
             const reviewJson = await r.json();
-            if (!r.ok) throw new Error(reviewJson?.error || 'Review failed');
+            if (!r.ok) throw new Error(reviewJson?.error || `Review failed (${r.status})`);
 
             setReviewPayload(reviewJson);
             setMessage('Legal review complete!');
         } catch (err: any) {
             console.error('[FE] legal review flow error:', err?.message || err);
-            setError('Failed to run legal review. Please try again.');
+            setError(err?.message || 'Failed to run legal review. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -112,7 +170,6 @@ export default function LegalReviewPage() {
                 </form>
 
                 {reviewPayload && (
-                    // If your <ReviewResults/> expects a string, send JSON.stringify(reviewPayload, null, 2)
                     <ReviewResults results={reviewPayload} className="mt-6 border-t pt-4" />
                 )}
             </div>
