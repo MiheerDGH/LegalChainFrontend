@@ -1,139 +1,49 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import formidable from "formidable";
-import fs from "fs";
-import nlp from "compromise";
+// pages/api/ai/legalReview.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-const analyzeLegalDocument = (text: string) => {
-  const doc = nlp(text);
-  const issues: string[] = [];
-  const suggestions: string[] = [];
-
-  const hasGoverningLaw = /governing law|jurisdiction/i.test(text);
-  const hasIndemnification = /indemnif(y|ication)/i.test(text);
-  const hasLiabilityLimit = /limitation of liability|liability cap/i.test(text);
-  const hasRenewal = /automatic renewal|renewal term/i.test(text);
-  const hasTermination = /termination|cancel|exit clause/i.test(text);
-  const hasForceMajeure = /force majeure/i.test(text);
-
-  const verbs = doc.verbs().out("array");
-  const legalVerbs = verbs.filter((v) =>
-    ["indemnify", "terminate", "govern", "renew", "compensate"].includes(
-      v.toLowerCase()
-    )
-  );
-
-  if (!hasGoverningLaw) {
-    issues.push("Missing governing law clause");
-    suggestions.push("Add a clause specifying jurisdiction and applicable law.");
-  }
-
-  if (hasIndemnification && !hasLiabilityLimit) {
-    issues.push("Indemnification clause without liability cap");
-    suggestions.push("Add a limitation of liability to balance risk exposure.");
-  }
-
-  if (hasRenewal) {
-    suggestions.push("Clarify renewal terms and opt-out procedures.");
-  }
-
-  if (!hasTermination) {
-    issues.push("No termination clause found");
-    suggestions.push("Include terms for early termination or breach.");
-  }
-
-  if (!hasForceMajeure) {
-    suggestions.push(
-      "Consider adding a force majeure clause to cover unforeseeable events."
-    );
-  }
-
-  const complianceScore = Math.min(
-    100,
-    60 + 5 * legalVerbs.length - 10 * issues.length
-  );
-
-  return {
-    complianceScore,
-    issues,
-    suggestions,
-    summary: `Document reviewed for legal compliance and enforceability. Found ${issues.length} issue(s).`,
-  };
-};
-
-export const config = {
-  api: {
-    bodyParser: false, // Required for formidable to handle file uploads
-  },
-};
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const form = formidable({
-  multiples: false,
-  uploadDir: "/tmp",         // or "./uploads"
-  keepExtensions: true,       // preserves .pdf/.docx/etc
-});
-
-  form.parse(req, async (err, fields, files) => {
-    try {
-      if (err || !files.file) {
-        console.error("Upload error:", err);
-        return res
-          .status(400)
-          .json({ error: "Failed to parse uploaded document" });
-      }
-
-      const file = files.file as formidable.File;
-      const filepath = file.filepath;
-      const mimetype = file.mimetype || "";
-      const originalName = file.originalFilename || "";
-
-      let text = "";
-
-      if (mimetype === "application/pdf" || originalName.endsWith(".pdf")) {
-        // PDF parsing requires optional dependency `pdf-parse` which may not be
-        // installed in this environment. Return an instructive error so the
-        // caller can upload a TXT/DOCX or install the optional dependency.
-        return res.status(501).json({ error: 'PDF extraction requires optional dependency "pdf-parse". Please install it on the server or upload a TXT/DOCX file.' });
-      } else if (
-        mimetype ===
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        originalName.endsWith(".docx")
-      ) {
-        // DOCX parsing requires optional dependency `mammoth` which may not be
-        // installed in this environment. Return an instructive error so the
-        // caller can upload a TXT/PDF or install the optional dependency.
-        return res.status(501).json({ error: 'DOCX extraction requires optional dependency "mammoth". Please install it on the server or upload a TXT/PDF file.' });
-      } else if (
-        mimetype === "text/plain" ||
-        originalName.endsWith(".txt") ||
-        !mimetype // fallback
-      ) {
-        // Plain text
-        text = fs.readFileSync(filepath, "utf-8");
-      } else {
-        return res.status(400).json({
-          error: "Unsupported file type. Please upload a TXT, PDF, or DOCX file.",
-        });
-      }
-
-      if (!text || text.trim().length === 0) {
-        return res
-          .status(400)
-          .json({ error: "Unable to extract text from the document." });
-      }
-
-      const review = analyzeLegalDocument(text);
-      return res.status(200).json({ message: "Legal review complete", review });
-    } catch (error) {
-      console.error("Review error:", error);
-      return res.status(500).json({ error: "Failed to review document" });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    if (req.method !== 'POST') {
+        res.setHeader('Allow', 'POST');
+        return res.status(405).json({ error: 'Method not allowed' });
     }
-  });
+
+    // 👇 prefer your actual env var name used in .env.local
+    const backendBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+    if (!backendBase) return res.status(500).json({ error: 'BACKEND_URL not configured' });
+
+    try {
+        const { documentId, role } = req.body || {};
+        if (!documentId || !role) return res.status(400).json({ error: 'documentId and role are required' });
+
+        const token = extractToken(req);
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const r = await fetch(`${backendBase}/api/docs/review`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ documentId, role }),
+        });
+
+        const text = await r.text();
+        let data: any;
+        try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+        return res.status(r.status).json(data);
+    } catch (err: any) {
+        console.error('[FE] legalReview proxy error:', err?.stack || err?.message || err);
+        return res.status(500).json({ error: 'Failed to run legal review. Please try again.', detail: err?.message || String(err) });
+    }
+}
+
+function extractToken(req: NextApiRequest): string | undefined {
+    const auth = req.headers['authorization'];
+    if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7);
+    const cookie = req.headers.cookie || '';
+    const pick = (name: string) => {
+        const m = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+        return m ? decodeURIComponent(m[1]) : undefined;
+    };
+    return pick('token') || pick('access_token') || pick('sb-access-token') || pick('sb:token') || undefined;
 }
