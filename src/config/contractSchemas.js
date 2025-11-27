@@ -1,7 +1,7 @@
 export const contractSchemas = {
   STANDARD: {
     key: 'STANDARD',
-    label: 'Starting Contract',
+    label: 'Standard Contract',
     description: 'Generic contract with clauses, parties, governing law, and signatures.',
     fields: [
       { key: 'title', label: 'Title', type: 'text', placeholder: 'Agreement Title (optional)', optional: true },
@@ -164,6 +164,7 @@ export const contractSchemas = {
     key: 'PARTNERSHIP',
     label: 'Partnership Agreement',
     fields: [
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'partners', label: 'Partners', type: 'repeatable', itemType: 'text', min: 2 },
       { key: 'capitalContributions', label: 'Capital Contributions', type: 'textarea' },
       { key: 'profitSharing', label: 'Profit / Loss Sharing', type: 'text' },
@@ -212,6 +213,7 @@ export const contractSchemas = {
     label: 'Equity Agreements',
     description: 'Purchase of equity securities: purchase price, number of shares, representations, vesting and transfer restrictions.',
     fields: [
+      { key: 'effectiveDate', label: 'Effective Date', type: 'date' },
       { key: 'buyer', label: 'Buyer', type: 'text' },
       { key: 'seller', label: 'Seller', type: 'text' },
       { key: 'shareClass', label: 'Share Class', type: 'text', optional: true },

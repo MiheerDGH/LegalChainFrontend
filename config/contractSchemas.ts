@@ -56,6 +56,22 @@ export const contractSchemas: Record<string, any> = {
     { key:'effectiveDate', label:'Effective Date', type:'date' },
     { key:'investmentAmount', label:'Investment Amount', type:'text' }
   ] }
+  , EQUITY: { key:'EQUITY', label:'Equity Agreement', fields:[
+    { key:'effectiveDate', label:'Effective Date', type:'date' },
+    { key:'buyer', label:'Buyer', type:'text' },
+    { key:'seller', label:'Seller', type:'text' },
+    { key:'numberOfShares', label:'Number of Shares', type:'text' },
+    { key:'purchasePrice', label:'Purchase Price', type:'text' },
+    { key:'closingDate', label:'Closing Date', type:'date', optional:true }
+  ] }
+  , PARTNERSHIP: { key:'PARTNERSHIP', label:'Partnership Agreement', fields:[
+    { key:'effectiveDate', label:'Effective Date', type:'date' },
+    { key:'partners', label:'Partners', type:'repeatable', itemType:'text' },
+    { key:'capitalContributions', label:'Capital Contributions', type:'textarea' },
+    { key:'profitSharing', label:'Profit / Loss Sharing', type:'text' },
+    { key:'management', label:'Governance / Management', type:'textarea' },
+    { key:'dissolution', label:'Withdrawal / Dissolution', type:'textarea', optional:true }
+  ] }
 };
 
 export default contractSchemas;
