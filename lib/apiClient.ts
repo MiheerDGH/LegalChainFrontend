@@ -127,7 +127,7 @@ export async function get(path: string, options?: { headers?: Record<string,stri
 
 export async function del(path: string, options?: { headers?: Record<string,string> }) {
   const url = path.startsWith('http') ? path : `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
-  const res = await fetch(url, { method: 'DELETE', headers: options?.headers || {}, credentials: 'include' });
+  const res = await fetch(url, { method: 'DELETE', headers: options?.headers || {}});
   const text = await res.text();
   try {
     const data = text ? JSON.parse(text) : null;
