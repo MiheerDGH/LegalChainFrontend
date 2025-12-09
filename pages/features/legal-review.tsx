@@ -170,7 +170,19 @@ export default function LegalReviewPage() {
                 </form>
 
                 {reviewPayload && (
-                    <ReviewResults results={reviewPayload} className="mt-6 border-t pt-4" />
+                    <div className="mt-6 border-t pt-4">
+                        {/* Risk / compliance score display */}
+                        {typeof reviewPayload.complianceScore === 'number' && (
+                            <div className="mb-4">
+                                <h2 className="text-lg font-semibold">Risk score</h2>
+                                <p className="text-3xl font-bold text-blue-600">
+                                    {reviewPayload.complianceScore} / 100
+                                </p>
+                            </div>
+                        )}
+
+                        <ReviewResults results={reviewPayload} />
+                    </div>
                 )}
             </div>
         </div>
