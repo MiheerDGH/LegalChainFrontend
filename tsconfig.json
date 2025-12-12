@@ -20,7 +20,7 @@
       "@/*": ["./*"]
     },
 
-    "types": ["node"],                   // ✅ add this so Buffer/stream types work in API routes
+    "types": ["node", "jest"],             // ✅ add this so Buffer/stream types work in API routes and include Jest types
 
     "plugins": [{ "name": "next" }]
   },

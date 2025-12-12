@@ -14,7 +14,16 @@ type ReviewResultsProps = {
 };
 
 export default function ReviewResults({ results, className = '' }: ReviewResultsProps) {
-  if (!results) return null;
+  if (results == null) return null;
+
+  if (typeof results === 'string' && results.trim().length === 0) {
+    return (
+        <div className={`mt-6 border-t pt-4 ${className}`}>
+          <h4 className="font-semibold mb-2">Analysis Result</h4>
+          <div className="text-sm text-gray-600">No results</div>
+        </div>
+    );
+  }
 
   const downloadJSON = () => {
     const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });

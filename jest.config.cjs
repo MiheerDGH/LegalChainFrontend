@@ -1,26 +1,18 @@
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'jsdom',
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
-  },
+const nextJest = require("next/jest");
+
+const createJestConfig = nextJest({
+  dir: "./", // path to your Next.js app
+});
+
+const customJestConfig = {
+  testEnvironment: "jest-environment-jsdom",
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "^@/(.*)$": "<rootDir>/$1",
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  testPathIgnorePatterns: ['/node_modules/', '/.next/'],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testPathIgnorePatterns: ["/node_modules/", "/.next/"],
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 };
-module.exports = {
-  testEnvironment: 'jsdom',
-  transform: {
-    '^.+\\.tsx?$': 'ts-jest',
-    '^.+\\.jsx?$': 'babel-jest',
-  },
-  moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-  },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  testPathIgnorePatterns: ['/node_modules/', '/.next/'],
-};
+
+module.exports = createJestConfig(customJestConfig);
