@@ -14,7 +14,19 @@ const Footer = () => {
         {/* Contact + Social Icons */}
         <div>
           <h3 className="text-lg font-semibold mb-3 text-sky-600">Contact</h3>
-          <p className="text-sm text-slate-700 mb-1">Email: hello@legalchain.com</p>
+
+          <p className="text-sm text-slate-700 mb-1">
+            Email:{' '}
+            <a
+              href="https://mail.google.com/mail/?view=cm&fs=1&to=info@legalcha.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 hover:underline"
+            >
+              info@legalcha.in
+            </a>
+          </p>
+
           <div className="flex gap-4 mt-2">
             {[
               { icon: FaFacebookF, href: '#' },
