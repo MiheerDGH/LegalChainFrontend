@@ -15,7 +15,6 @@ const Footer = () => {
         <div>
           <h3 className="text-lg font-semibold mb-3 text-sky-600">Contact</h3>
           <p className="text-sm text-slate-700 mb-1">Email: hello@legalchain.com</p>
-          <p className="text-sm text-slate-700 mb-4">Phone: +1 (800) 123-4567</p>
           <div className="flex gap-4 mt-2">
             {[
               { icon: FaFacebookF, href: '#' },
