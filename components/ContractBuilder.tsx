@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../lib/contractApi';
 import contractSchemas from '../src/config/contractSchemas';
+import JurisdictionSelector from './ui/JurisdictionSelector';
 
 // Note: DOMPurify requires a window to initialize with JSDOM in SSR-free codepath.
 // We'll require it at runtime on the client only.
@@ -346,8 +347,11 @@ export default function ContractBuilder() {
         </div>
 
         <div className="mb-4">
-          <label className="block font-medium mb-1">Jurisdiction (Governing Law)</label>
-          <input className="w-full border px-3 py-2 rounded" value={formValues.jurisdiction || ''} onChange={(e) => updateField('jurisdiction', e.target.value)} placeholder="e.g., California, United States or US-CA" />
+          <JurisdictionSelector
+            value={formValues.jurisdiction || ''}
+            onChange={(val) => updateField('jurisdiction', val)}
+            required
+          />
         </div>
 
         <div className="mb-4">

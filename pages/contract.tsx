@@ -4,16 +4,7 @@ import supabase from '../lib/supabaseClient';
 import apiClient from '../lib/apiClient';
 import contractTypes from '../config/contractTypes';
 import contractSchemas from '../src/config/contractSchemas';
-
-const jurisdictions = [
-  { id: 'US-CA', label: 'California, United States' },
-  { id: 'US-NY', label: 'New York, United States' },
-  { id: 'US-TX', label: 'Texas, United States' },
-  { id: 'UK-ENG', label: 'England, United Kingdom' },
-  { id: 'CA-ON', label: 'Ontario, Canada' },
-  { id: 'AU-NSW', label: 'New South Wales, Australia' },
-  { id: 'IN-DL', label: 'Delhi, India' },
-];
+import JurisdictionSelector from '../components/ui/JurisdictionSelector';
 
 export default function ContractCreationPage() {
   const router = useRouter();
@@ -434,28 +425,14 @@ export default function ContractCreationPage() {
           </div>
 
           {/* Jurisdiction is required for all contract types -> render globally */}
-          <div>
-            <label htmlFor="jurisdiction" className="block font-medium mb-1">
-              Jurisdiction (Governing Law)
-            </label>
-            <select
-              id="jurisdiction"
-              value={formValues.jurisdiction ?? jurisdiction}
-              onChange={(e) => { setFormValues(prev => ({ ...prev, jurisdiction: e.target.value })); setJurisdiction(e.target.value); }}
-              className="w-full border px-3 py-2 rounded-md"
-              required
-            >
-              <option value="">Select a state or country</option>
-              {jurisdictions.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              The legal region whose laws apply to this agreement.
-            </p>
-          </div>
+          <JurisdictionSelector
+            value={formValues.jurisdiction ?? jurisdiction}
+            onChange={(val) => { 
+              setFormValues(prev => ({ ...prev, jurisdiction: val })); 
+              setJurisdiction(val); 
+            }}
+            required
+          />
 
           {/* Render form fields dynamically based on selected schema */}
           {(() => {
