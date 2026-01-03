@@ -37,7 +37,7 @@ export default function SignupPage() {
     }
 
     setSuccess(
-      'Account created! Please check your email inbox (and spam folder) to verify your account before logging in.'
+      'Account created. We just sent a confirmation email — open it and click “Verify email” to sign in.'
     );
   };
 
@@ -45,9 +45,14 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
       <div className="w-full max-w-md bg-white rounded-xl p-[2px]">
         <div className="bg-white rounded-xl p-6 shadow-md text-gray-900">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
             Create Your Account
           </h1>
+
+          {/* NEW: upfront info about confirmation email */}
+          <p className="text-sm text-gray-600 text-center mb-6">
+            After you sign up, you’ll receive a confirmation email. Verify your email to complete setup and sign in.
+          </p>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <input

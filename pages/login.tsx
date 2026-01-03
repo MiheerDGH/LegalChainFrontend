@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import supabase from '../lib/supabaseClient';
 import Link from 'next/link';
+import { FaGoogle, FaApple, FaLinkedin } from 'react-icons/fa';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -58,6 +59,31 @@ export default function LoginPage() {
     }
   };
 
+  // --- NEW: OAuth handlers ---
+  const handleOAuth = async (
+    provider: 'google' | 'apple' | 'linkedin_oidc'
+  ) => {
+    try {
+      setLoading(true);
+      setError('');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`, // make sure this URL is allowed in Supabase
+          queryParams: provider === 'google'
+            ? { prompt: 'select_account' }
+            : undefined,
+        },
+      });
+      if (error) setError(error.message);
+      // On success, Supabase will redirect to /auth/callback then back to your app
+    } catch (e: any) {
+      setError(e?.message || 'OAuth login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-gradient-to-tr from-yellow-500 to-yellow-300 rounded-xl p-[2px]">
@@ -65,6 +91,50 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-white text-center mb-2">Legal Chain</h1>
           <p className="text-gray-400 text-center mb-6 text-sm">Sign in to your account</p>
 
+          {/* OAuth buttons */}
+          <div className="space-y-3 mb-6">
+            <button
+              type="button"
+              onClick={() => handleOAuth('google')}
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-3 border border-gray-700 rounded-md px-4 py-3 hover:bg-white/5 transition disabled:opacity-50"
+              aria-label="Continue with Google"
+            >
+              <FaGoogle className="text-white" />
+              <span>Continue with Google</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOAuth('apple')}
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-3 border border-gray-700 rounded-md px-4 py-3 hover:bg-white/5 transition disabled:opacity-50"
+              aria-label="Continue with Apple"
+            >
+              <FaApple className="text-white" />
+              <span>Continue with Apple</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOAuth('linkedin_oidc')}
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-3 border border-gray-700 rounded-md px-4 py-3 hover:bg-white/5 transition disabled:opacity-50"
+              aria-label="Continue with LinkedIn"
+            >
+              <FaLinkedin className="text-white" />
+              <span>Continue with LinkedIn</span>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px bg-gray-800 flex-1" />
+            <span className="text-xs text-gray-400">or</span>
+            <div className="h-px bg-gray-800 flex-1" />
+          </div>
+
+          {/* Email/password form */}
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <input
