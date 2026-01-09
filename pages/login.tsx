@@ -55,28 +55,23 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedEmail');
         localStorage.removeItem('rememberedPassword');
       }
-      router.push('/');
+      router.push('/dashboard'); // go straight to dashboard
     }
   };
 
-  // --- NEW: OAuth handlers ---
-  const handleOAuth = async (
-    provider: 'google' | 'apple' | 'linkedin_oidc'
-  ) => {
+  // OAuth → direct to /dashboard
+  const handleOAuth = async (provider: 'google' | 'apple' | 'linkedin_oidc') => {
     try {
       setLoading(true);
       setError('');
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`, // make sure this URL is allowed in Supabase
-          queryParams: provider === 'google'
-            ? { prompt: 'select_account' }
-            : undefined,
+          redirectTo: `${window.location.origin}/dashboard`, // direct to dashboard
+          queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
         },
       });
       if (error) setError(error.message);
-      // On success, Supabase will redirect to /auth/callback then back to your app
     } catch (e: any) {
       setError(e?.message || 'OAuth login failed.');
     } finally {
