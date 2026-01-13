@@ -34,6 +34,14 @@ export default function LoginPage() {
     sessionStorage.removeItem('tempLoginPassword');
   }, []);
 
+  // ✅ If they’re already logged in and hit /login, send them to home (/)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) router.replace('/');
+    })();
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -55,22 +63,23 @@ export default function LoginPage() {
         localStorage.removeItem('rememberedEmail');
         localStorage.removeItem('rememberedPassword');
       }
-      router.push('/dashboard'); // go straight to dashboard
+      router.replace('/'); // ✅ index.tsx
     }
   };
 
-  // OAuth → direct to /dashboard
   const handleOAuth = async (provider: 'google' | 'apple' | 'linkedin_oidc') => {
     try {
       setLoading(true);
       setError('');
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`, // direct to dashboard
+          redirectTo: `${window.location.origin}/`, // ✅ after OAuth, return to /
           queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
         },
       });
+
       if (error) setError(error.message);
     } catch (e: any) {
       setError(e?.message || 'OAuth login failed.');
@@ -86,14 +95,12 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-white text-center mb-2">Legal Chain</h1>
           <p className="text-gray-400 text-center mb-6 text-sm">Sign in to your account</p>
 
-          {/* OAuth buttons */}
           <div className="space-y-3 mb-6">
             <button
               type="button"
               onClick={() => handleOAuth('google')}
               disabled={loading}
               className="w-full inline-flex items-center justify-center gap-3 border border-gray-700 rounded-md px-4 py-3 hover:bg-white/5 transition disabled:opacity-50"
-              aria-label="Continue with Google"
             >
               <FaGoogle className="text-white" />
               <span>Continue with Google</span>
@@ -104,7 +111,6 @@ export default function LoginPage() {
               onClick={() => handleOAuth('apple')}
               disabled={loading}
               className="w-full inline-flex items-center justify-center gap-3 border border-gray-700 rounded-md px-4 py-3 hover:bg-white/5 transition disabled:opacity-50"
-              aria-label="Continue with Apple"
             >
               <FaApple className="text-white" />
               <span>Continue with Apple</span>
@@ -115,45 +121,36 @@ export default function LoginPage() {
               onClick={() => handleOAuth('linkedin_oidc')}
               disabled={loading}
               className="w-full inline-flex items-center justify-center gap-3 border border-gray-700 rounded-md px-4 py-3 hover:bg-white/5 transition disabled:opacity-50"
-              aria-label="Continue with LinkedIn"
             >
               <FaLinkedin className="text-white" />
               <span>Continue with LinkedIn</span>
             </button>
           </div>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 mb-6">
             <div className="h-px bg-gray-800 flex-1" />
             <span className="text-xs text-gray-400">or</span>
             <div className="h-px bg-gray-800 flex-1" />
           </div>
 
-          {/* Email/password form */}
           <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <input
-                type="email"
-                aria-label="Email"
-                placeholder="user@example.com"
-                className="w-full bg-transparent border border-gray-700 text-white px-4 py-3 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="email"
+              placeholder="user@example.com"
+              className="w-full bg-transparent border border-gray-700 text-white px-4 py-3 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+            />
 
-            <div>
-              <input
-                type="password"
-                aria-label="Password"
-                placeholder="Your Password"
-                className="w-full bg-transparent border border-gray-700 text-white px-4 py-3 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="password"
+              placeholder="Your Password"
+              className="w-full bg-transparent border border-gray-700 text-white px-4 py-3 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
 
             <div className="flex justify-between items-center text-sm text-gray-400">
               <label className="flex items-center gap-2">
