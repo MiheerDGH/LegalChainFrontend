@@ -1,10 +1,24 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useRouter } from "next/router";
+import supabase from "../lib/supabaseClient";
+
 import HeroHeader from "@/components/ui/HeroHeader";
 import PracticeAreas from "@/components/ui/PracticeAreas";
 import WhyLegalChain from "@/components/ui/WhyLegalChain";
 import Footer from "@/components/ui/Footer";
 
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        router.replace("/login");
+      }
+    })();
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       <main>
