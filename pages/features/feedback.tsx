@@ -28,21 +28,24 @@ export default function FeedbackPage() {
       const userId = data?.session?.user?.id;
       const userEmail = email || data?.session?.user?.email || 'anonymous';
 
-      // Insert feedback into Supabase
-      const { error: insertError } = await supabase
-        .from('feedback')
-        .insert([
-          {
-            user_id: userId,
-            email: userEmail,
-            feedback_type: feedbackType,
-            feedback_text: feedbackText,
-            created_at: new Date().toISOString(),
-          },
-        ]);
+      // Call local API endpoint to submit feedback
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          email: userEmail,
+          feedback_type: feedbackType,
+          message: feedbackText,
+        }),
+      });
 
-      if (insertError) {
-        setError(`Failed to submit feedback: ${insertError.message}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(`Failed to submit feedback: ${result.error || 'Unknown error'}`);
         return;
       }
 
@@ -50,11 +53,6 @@ export default function FeedbackPage() {
       setFeedbackText('');
       setEmail('');
       setFeedbackType('general');
-
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
     } catch (err: any) {
       setError(`Error submitting feedback: ${err?.message || String(err)}`);
       console.error('Feedback submission error:', err);
