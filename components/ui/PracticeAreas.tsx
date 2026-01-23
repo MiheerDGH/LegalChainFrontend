@@ -9,6 +9,7 @@ import {
   FaFileCode,
   FaBalanceScale,
   FaLanguage,
+  FaComments,
 } from 'react-icons/fa';
 
 const areas = [
@@ -19,7 +20,8 @@ const areas = [
   //{ icon: <FaRegEnvelope size={32} />, title: 'Document Summary', href: '/features/summary', desc: 'We distill lengthy legal documents into concise, easy-to-understand summaries highlighting key terms and provisions. Our summaries focus on essential information, deadlines, obligations, and potential risks to save you time and improve comprehension. This service is particularly valuable for executives and decision-makers who need quick insights without reading entire documents.' },
   //{ icon: <FaFileCode size={32} />, title: 'Document Comparison', href: '/features/comparison', desc: 'We provide detailed analysis comparing multiple versions of contracts or legal documents to identify changes, additions, and deletions. Our comparison service highlights critical differences that could impact your legal position or business operations. This ensures you fully understand modifications before signing updated agreements or contract amendments.' },
   { icon: <FaBalanceScale size={32} />, title: 'Legal Review', href: '/features/legal-review', desc: 'Our comprehensive legal review service examines documents for compliance, accuracy, and potential legal issues before execution. We identify problematic clauses, suggest improvements, and ensure documents meet current legal standards and regulations. This proactive approach helps prevent costly legal disputes and ensures your agreements are enforceable and protective of your interests.' },
-  //{ icon: <FaLanguage size={32} />, title: 'Translation', href: '/features/translation', desc: 'We provide accurate legal document translation services by qualified legal translators familiar with both languages and legal systems. Our translations maintain the precise legal meaning and terminology while ensuring clarity in the target language. This service includes certification when required for official legal proceedings or international business transactions.' },
+  { icon: <FaLanguage size={32} />, title: 'Translation', href: '/features/translation', desc: 'We provide accurate legal document translation services by qualified legal translators familiar with both languages and legal systems. Our translations maintain the precise legal meaning and terminology while ensuring clarity in the target language. This service includes certification when required for official legal proceedings or international business transactions.' },
+  { icon: <FaComments size={32} />, title: 'Feedback', href: '/features/feedback', desc: 'Share your thoughts, report bugs, or suggest improvements. Your feedback helps us continuously enhance Legal Chain to better serve your legal needs. Whether you have a suggestion for a new feature, encountered an issue, or want to share your experience, we\'d love to hear from you.' },
 ];
 
 export default function PracticeAreas() {
